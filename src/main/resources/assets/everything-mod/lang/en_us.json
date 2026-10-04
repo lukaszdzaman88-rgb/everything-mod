@@ -1,6 +1,7 @@
 {
   "item.everything-mod.xp_talisman": "XP Talisman",
-  "tooltip.xptalisman.stored_xp" : "Stored XP: %s"
+  "tooltip.xptalisman.stored_xp" : "Stored Level: %s (%s XP)"
+
 
 
 

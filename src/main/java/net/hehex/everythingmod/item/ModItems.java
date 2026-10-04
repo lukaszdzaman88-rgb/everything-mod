@@ -35,7 +35,7 @@ public class ModItems {
             XPTalismanItem::new,
             new Item.Properties()
                     .stacksTo(1)
-                    .component(ModComponents.STORED_XP, 0)
+                    .durability(10)
     );
 
     public static void initialize() {

@@ -3,6 +3,7 @@ package net.hehex.everythingmod;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.ModInitializer;
 
+import net.hehex.everythingmod.component.ModComponents;
 import net.hehex.everythingmod.item.ModItems;
 import net.minecraft.resources.Identifier;
 
@@ -17,6 +18,7 @@ public class EverythingMod implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		ModItems.registerModItems();
+		ModComponents.initialize();
 
 	}
 

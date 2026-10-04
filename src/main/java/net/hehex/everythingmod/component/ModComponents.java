@@ -10,19 +10,21 @@ import net.minecraft.resources.Identifier;
 
 public class ModComponents {
 
-    public static final DataComponentType<Integer> STORED_XP =
-            Registry.register(
-                    BuiltInRegistries.DATA_COMPONENT_TYPE,
-                    Identifier.fromNamespaceAndPath(
-                            EverythingMod.MOD_ID,
-                            "stored_xp"
-                    ),
-                    DataComponentType.<Integer>builder()
-                            .persistent(Codec.intRange(0, Integer.MAX_VALUE))
-                            .networkSynchronized(ByteBufCodecs.VAR_INT)
-                            .build()
-            );
+    public static DataComponentType<Integer> STORED_XP;
 
     public static void initialize() {
+
+        STORED_XP = Registry.register(
+                BuiltInRegistries.DATA_COMPONENT_TYPE,
+                Identifier.fromNamespaceAndPath(
+                        EverythingMod.MOD_ID,
+                        "stored_xp"
+                ),
+                DataComponentType.<Integer>builder()
+                        .persistent(Codec.intRange(0, Integer.MAX_VALUE))
+                        .networkSynchronized(ByteBufCodecs.VAR_INT)
+                        .build()
+        );
     }
 }
+

@@ -17,6 +17,6 @@ public class ModModelProvider extends FabricModelProvider {
 
     @Override
     public void generateItemModels(ItemModelGenerators itemModelGenerators) {
-        itemModelGenerators.generateFlatItem(ModItems.XP_TALISMAN, ModelTemplates.FLAT_ITEM);
+
     }
 }
