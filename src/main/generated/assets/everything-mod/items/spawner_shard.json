@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "everything-mod:item/spawner_shard"
+  }
+}

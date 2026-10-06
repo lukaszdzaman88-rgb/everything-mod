@@ -5,6 +5,8 @@ import net.fabricmc.api.ModInitializer;
 
 import net.hehex.everythingmod.component.ModComponents;
 import net.hehex.everythingmod.item.ModItems;
+import net.hehex.everythingmod.loot.SpawnerLoot;
+import net.hehex.everythingmod.loot.SpawnerSoulLoot;
 import net.minecraft.resources.Identifier;
 
 import org.slf4j.Logger;
@@ -18,11 +20,11 @@ public class EverythingMod implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		ModItems.registerModItems();
+		ModItems.initialize();
 		ModComponents.initialize();
+		SpawnerLoot.initialize();
+		SpawnerSoulLoot.initialize();
 
 	}
 
-	public static Identifier id(String path) {
-		return Identifier.fromNamespaceAndPath(MOD_ID, path);
-	}
 }

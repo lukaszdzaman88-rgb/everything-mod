@@ -29,7 +29,15 @@ public class ModRecipeProvider extends FabricRecipeProvider {
                         .define('E', Items.EMERALD)
                         .unlockedBy(getHasName(Items.GOLD_INGOT), has(Items.GOLD_INGOT))
                         .save(output);
-
+                shaped(RecipeCategory.MISC, Items.SPAWNER)
+                        .pattern(" S ")
+                        .pattern("S S")
+                        .pattern(" S ")
+                        .define('S', ModItems.SPAWNER_SHARD)
+                        .unlockedBy(
+                                getHasName(ModItems.SPAWNER_SHARD),
+                                has(ModItems.SPAWNER_SHARD))
+                        .save(output);
 
 
 

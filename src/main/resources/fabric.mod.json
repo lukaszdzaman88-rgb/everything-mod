@@ -19,13 +19,20 @@
 			"net.hehex.everythingmod.EverythingMod"
 
 		],
+		"client": [
+			"net.hehex.everythingmod.client.EnchantingRerollClient"
+		],
 		"fabric-datagen": [
 			"net.hehex.everythingmod.EverythingModDataGenerator"
 		]
 
 	},
 	"mixins": [
-		"everything-mod.mixins.json"
+		"everything-mod.mixins.json",
+		{
+			"config": "everything-mod.client.mixins.json",
+			"environment": "client"
+		}
 	],
 	"depends": {
 		"fabricloader": ">=0.19.5",

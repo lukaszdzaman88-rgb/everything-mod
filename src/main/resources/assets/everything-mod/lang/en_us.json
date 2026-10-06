@@ -1,8 +1,14 @@
 {
   "item.everything-mod.xp_talisman": "XP Talisman",
-  "tooltip.xptalisman.stored_xp" : "Stored Level: %s (%s XP)"
+  "item.everything-mod.spawner_shard": "Spawner Shard",
+  "item.everything-mod.soul_of_the_zombie": "Soul Of The Zombie",
+  "item.everything-mod.soul_of_the_skeleton": "Soul Of The Skeleton",
+  "item.everything-mod.soul_of_the_spider": "Soul Of The Spider",
+  "item.everything-mod.soul_of_the_creeper": "Soul Of The Creeper",
 
+  "tooltip.xptalisman.stored_xp" : "Stored Level: %s (%s XP)",
 
+  "gui.everything_mod.enchanting.reroll": "Reroll"
 
 
 

@@ -1,1 +1,11 @@
 // 26.2	-999999999-01-01T00:00:00	Everything Mod/Model Definitions
+4c58a34bbe05d39c304be773e7643004f52d297d assets/everything-mod/items/soul_of_the_creeper.json
+937212a8d55f8878183848a8fe57ebdbbaecbe22 assets/everything-mod/items/soul_of_the_skeleton.json
+a8086df29f6eda6e7a28167462569fa352a94fd7 assets/everything-mod/items/soul_of_the_spider.json
+8be3bd9637f052b65410760bdb47c64f0a09cf53 assets/everything-mod/items/soul_of_the_zombie.json
+30a1f3d70c8bbac3946e7f6bbbb61d481ca476cc assets/everything-mod/items/spawner_shard.json
+393a04a68085c72905ff1f17928fb6060fd88db7 assets/everything-mod/models/item/soul_of_the_creeper.json
+28efe2713ae619ed4b8ad2a8d159f60715a140cd assets/everything-mod/models/item/soul_of_the_skeleton.json
+ef93382d2ab866a73de15ef6834aaf5b735542f1 assets/everything-mod/models/item/soul_of_the_spider.json
+c2643a32b9cdf067e8fb29c9078b29153ad9c7b9 assets/everything-mod/models/item/soul_of_the_zombie.json
+34a89f16671204c54b0e8b1d637be613648f9385 assets/everything-mod/models/item/spawner_shard.json

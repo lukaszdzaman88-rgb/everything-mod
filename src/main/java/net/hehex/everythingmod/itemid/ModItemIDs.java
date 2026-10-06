@@ -19,4 +19,10 @@ public class ModItemIDs {
     }
 
     public static final ResourceKey<Item> XP_TALISMAN = create("xp_talisman");
+
+    public static final ResourceKey<Item> SPAWNER_SHARD = create("spawner_shard");
+    public static final ResourceKey<Item> SOUL_OF_THE_ZOMBIE = create("soul_of_the_zombie");
+    public static final ResourceKey<Item> SOUL_OF_THE_SKELETON = create("soul_of_the_skeleton");
+    public static final ResourceKey<Item> SOUL_OF_THE_SPIDER = create("soul_of_the_spider");
+    public static final ResourceKey<Item> SOUL_OF_THE_CREEPER = create("soul_of_the_creeper");
 }
