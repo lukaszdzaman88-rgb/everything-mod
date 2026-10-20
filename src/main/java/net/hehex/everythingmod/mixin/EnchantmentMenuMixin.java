@@ -51,19 +51,27 @@ public abstract class EnchantmentMenuMixin {
             return;
         }
 
+        // Przedmiot musi mieć jakiekolwiek oferty (inaczej nie zabieramy lapisu na darmo).
+        if (menu.costs[0] <= 0 && menu.costs[1] <= 0 && menu.costs[2] <= 0) {
+            cir.setReturnValue(false);
+            return;
+        }
+
         // Muszą być co najmniej 3 lapisy.
         if (menu.getSlot(1).getItem().getCount() < REROLL_LAPIS_COST) {
             cir.setReturnValue(false);
             return;
         }
 
-        // Zabierz 3 lapisy ze slotu lapisu.
-        menu.getSlot(1).remove(REROLL_LAPIS_COST);
+        // Zabierz 3 lapisy (tryb kreatywny, tak jak w vanilla, nic nie kosztuje).
+        if (!player.hasInfiniteMaterials()) {
+            menu.getSlot(1).remove(REROLL_LAPIS_COST);
+        }
 
         // Wylosuj nowe ziarno enchantingu.
         enchantmentSeed.set(RandomSource.create().nextInt());
 
-        // Ponownie wygeneruj oferty.
+        // Ponownie wygeneruj oferty (serwer wyśle je klientowi przy broadcastChanges).
         menu.slotsChanged(enchantSlots);
 
         cir.setReturnValue(true);

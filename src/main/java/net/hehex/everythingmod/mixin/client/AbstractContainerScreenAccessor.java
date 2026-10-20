@@ -16,7 +16,9 @@ public interface AbstractContainerScreenAccessor {
     @Accessor("inventoryLabelY")
     void everything$setInventoryLabelY(int y);
 
+    @Accessor("leftPos")
+    int everything$getLeftPos();
+
     @Accessor("topPos")
-    @Mutable
-    void everything$setTopPos(int top);
+    int everything$getTopPos();
 }

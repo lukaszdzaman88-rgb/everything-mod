@@ -1,0 +1,676 @@
+diff --git a/src/main/java/net/hehex/everythingmod/client/EnchantingRerollClient.java b/src/main/java/net/hehex/everythingmod/client/EnchantingRerollClient.java
+index f829136..ee363ad 100644
+--- a/src/main/java/net/hehex/everythingmod/client/EnchantingRerollClient.java
++++ b/src/main/java/net/hehex/everythingmod/client/EnchantingRerollClient.java
+@@ -10,10 +10,10 @@ import net.fabricmc.fabric.api.client.screen.v1.Screens;
+ 
+ import net.hehex.everythingmod.mixin.client.AbstractContainerScreenAccessor;
+ import net.hehex.everythingmod.mixin.client.SlotAccessor;
++import net.minecraft.client.Minecraft;
+ import net.minecraft.client.gui.components.Button;
+ import net.minecraft.client.gui.screens.inventory.EnchantmentScreen;
+ import net.minecraft.client.renderer.RenderPipelines;
+-import net.minecraft.client.Minecraft;
+ import net.minecraft.network.chat.Component;
+ import net.minecraft.resources.Identifier;
+ import net.minecraft.world.inventory.EnchantmentMenu;
+@@ -21,36 +21,53 @@ import net.minecraft.world.inventory.Slot;
+ import net.minecraft.world.item.ItemStack;
+ import net.minecraft.world.item.Items;
+ 
++/**
++ * Rozszerzone GUI stołu do enchantowania z przyciskiem Reroll.
++ *
++ * <pre>
++ * Układ tekstury (176 x 194, w pliku PNG 256 x 256):
++ *
++ *   y =   0 ..  71   vanilla: tytuł, sloty itemu/lapisu, 3 przyciski enchantów
++ *   y =  72 .. 110   WOLNE MIEJSCE (28 px dodane przez moda) - tu jest Reroll
++ *   y = 111 .. 193   ekwipunek + hotbar (przesunięte o 28 px w dół)
++ * </pre>
++ *
++ * Górną część (0-71) rysuje vanilla, więc nazwy enchantów, ikony poziomów i
++ * podświetlenie działają normalnie. My dorysowujemy wyłącznie dolną część
++ * tekstury (od y = 72), która przykrywa stare, nieprzesunięte tło ekwipunku.
++ */
+ public class EnchantingRerollClient implements ClientModInitializer {
+ 
+     private static final int REROLL_BUTTON_ID = 3;
+     private static final int REROLL_COST = 3;
+ 
+-    /*
+-     * TWOJA TEKSTURA:
+-     *
+-     * 176 x 194
+-     */
++    /* Rozmiar naszej tekstury w GUI. */
+     private static final int GUI_WIDTH = 176;
+     private static final int GUI_HEIGHT = 194;
+ 
+-    /*
+-     * Vanilla:
+-     *
+-     * 176 x 166
+-     */
+-    private static final int VANILLA_GUI_HEIGHT = 166;
++    /* Prawdziwy rozmiar pliku PNG (WAŻNE dla blit - nie 176x194!). */
++    private static final int TEXTURE_SIZE = 256;
+ 
+-    /*
+-     * 194 - 166 = 28
+-     */
++    /* Vanilla: 166 px. My: 194 px => +28 px. */
+     private static final int EXTRA_HEIGHT = 28;
+ 
++    /* Od tego wiersza tekstury zaczyna się nasza część (wszystko wyżej = vanilla). */
++    private static final int SEAM_Y = 72;
++
++    /* Vanilla: napis "Inventory" jest na y = 72. */
++    private static final int VANILLA_INVENTORY_LABEL_Y = 72;
++
+     /*
+-     * Ekwipunek przesuwamy dokładnie o tyle,
+-     * ile dodaliśmy do tekstury.
++     * Przycisk Reroll (współrzędne względem lewego górnego rogu GUI).
++     *
++     * Przyciski enchantów mają 108 px szerokości i kończą się na x = 168,
++     * więc Reroll (połowa szerokości = 54 px) wyrównujemy do ich prawej krawędzi.
++     * Pionowo siedzi w wolnych 28 px pod przyciskami enchantów.
+      */
+-    private static final int INVENTORY_SHIFT = 28;
++    private static final int BUTTON_WIDTH = 54;
++    private static final int BUTTON_HEIGHT = 20;
++    private static final int BUTTON_X = 168 - BUTTON_WIDTH; // 114
++    private static final int BUTTON_Y = 76;
+ 
+     private static final Identifier ENCHANTING_TABLE_TEXTURE =
+             Identifier.fromNamespaceAndPath(
+@@ -59,23 +76,24 @@ public class EnchantingRerollClient implements ClientModInitializer {
+             );
+ 
+     private static final Set<EnchantmentScreen> REGISTERED_SCREENS =
+-            Collections.newSetFromMap(
+-                    new WeakHashMap<>()
+-            );
++            Collections.newSetFromMap(new WeakHashMap<>());
+ 
+     private static final WeakHashMap<EnchantmentScreen, Button> REROLL_BUTTONS =
+             new WeakHashMap<>();
+ 
++    /*
++     * Menu, którym już przesunęliśmy sloty ekwipunku.
++     * Bez tego każdy resize okna (ponowny init) przesuwałby sloty kolejny raz.
++     */
++    private static final Set<EnchantmentMenu> SHIFTED_MENUS =
++            Collections.newSetFromMap(new WeakHashMap<>());
++
+     @Override
+     public void onInitializeClient() {
+ 
+         /*
+-         * =========================================
+-         * ZMIANA WYSOKOŚCI GUI
+-         * =========================================
+-         *
+-         * Przed normalnym init Minecrafta ustawiamy
+-         * wysokość na 194 px.
++         * Przed vanillowym init() ustawiamy wysokość 194 px,
++         * dzięki czemu vanilla sama wyśrodkuje całe GUI (leftPos/topPos).
+          */
+         ScreenEvents.BEFORE_INIT.register(
+                 (client, screen, scaledWidth, scaledHeight) -> {
+@@ -87,21 +105,13 @@ public class EnchantingRerollClient implements ClientModInitializer {
+                     AbstractContainerScreenAccessor accessor =
+                             (AbstractContainerScreenAccessor) screen;
+ 
+-                    accessor.everything$setImageHeight(
+-                            GUI_HEIGHT
+-                    );
+-
++                    accessor.everything$setImageHeight(GUI_HEIGHT);
+                     accessor.everything$setInventoryLabelY(
+-                            72 + INVENTORY_SHIFT
++                            VANILLA_INVENTORY_LABEL_Y + EXTRA_HEIGHT
+                     );
+                 }
+         );
+ 
+-        /*
+-         * =========================================
+-         * DODANIE REROLL + PRZESUNIĘCIE SLOTÓW
+-         * =========================================
+-         */
+         ScreenEvents.AFTER_INIT.register(
+                 (client, screen, scaledWidth, scaledHeight) -> {
+ 
+@@ -109,80 +119,19 @@ public class EnchantingRerollClient implements ClientModInitializer {
+                         return;
+                     }
+ 
+-                    if (!(client.player.containerMenu
++                    if (client.player == null
++                            || !(client.player.containerMenu
+                             instanceof EnchantmentMenu menu)) {
+                         return;
+                     }
+ 
+-                    AbstractContainerScreenAccessor screenAccessor =
+-                            (AbstractContainerScreenAccessor) enchantmentScreen;
+-
+-                    /*
+-                     * UWAGA:
+-                     *
+-                     * Vanilla GUI jest centrowane względem 166 px.
+-                     *
+-                     * Chcemy zachować jego oryginalną górę
+-                     * i dołożyć 28 px WYŁĄCZNIE W DÓŁ.
+-                     */
+-                    int vanillaTop =
+-                            (scaledHeight - VANILLA_GUI_HEIGHT) / 2;
++                    shiftInventorySlots(menu);
+ 
+-                    screenAccessor.everything$setTopPos(
+-                            vanillaTop
+-                    );
+-
+-                    /*
+-                     * =================================
+-                     * PRZESUWAMY EKWIPUNEK
+-                     * =================================
+-                     *
+-                     * Sloty:
+-                     *
+-                     * 0 = przedmiot
+-                     * 1 = lapis
+-                     * 2+ = inventory
+-                     */
+-                    for (int i = 2; i < menu.slots.size(); i++) {
+-
+-                        Slot slot = menu.slots.get(i);
+-
+-                        SlotAccessor accessor =
+-                                (SlotAccessor) slot;
+-
+-                        accessor.everything$setY(
+-                                slot.y + INVENTORY_SHIFT
+-                        );
+-                    }
+-
+-                    /*
+-                     * =================================
+-                     * POZYCJA GUI
+-                     * =================================
+-                     */
+-                    int guiLeft =
+-                            (scaledWidth - GUI_WIDTH) / 2;
+-
+-                    int guiTop =
+-                            vanillaTop;
+-
+-                    /*
+-                     * =================================
+-                     * REROLL BUTTON
+-                     * =================================
+-                     *
+-                     * Dodatkowe 28 px zaczyna się
+-                     * zaraz po vanilla GUI.
+-                     *
+-                     * 166 -> 194
+-                     *
+-                     * Przyciskiem zajmujemy 20 px.
+-                     */
+-                    int buttonX =
+-                            guiLeft + 108;
++                    AbstractContainerScreenAccessor accessor =
++                            (AbstractContainerScreenAccessor) enchantmentScreen;
+ 
+-                    int buttonY =
+-                            guiTop + 170;
++                    int guiLeft = accessor.everything$getLeftPos();
++                    int guiTop = accessor.everything$getTopPos();
+ 
+                     Button rerollButton =
+                             Button.builder(
+@@ -206,239 +155,164 @@ public class EnchantingRerollClient implements ClientModInitializer {
+                                             }
+                                     )
+                                     .bounds(
+-                                            buttonX,
+-                                            buttonY,
+-                                            54,
+-                                            20
++                                            guiLeft + BUTTON_X,
++                                            guiTop + BUTTON_Y,
++                                            BUTTON_WIDTH,
++                                            BUTTON_HEIGHT
+                                     )
+                                     .build();
+ 
+-                    Screens.getWidgets(
+-                            enchantmentScreen
+-                    ).add(rerollButton);
++                    rerollButton.active = canReroll(menu);
+ 
+-                    REROLL_BUTTONS.put(
+-                            enchantmentScreen,
+-                            rerollButton
+-                    );
++                    Screens.getWidgets(enchantmentScreen).add(rerollButton);
++                    REROLL_BUTTONS.put(enchantmentScreen, rerollButton);
+ 
+                     /*
+-                     * =================================
+-                     * EVENTY RENDEROWANIA
+-                     * =================================
++                     * Zdarzenia renderowania rejestrujemy tylko raz na ekran
++                     * (init wywołuje się ponownie np. przy zmianie rozmiaru okna).
+                      */
+-                    if (REGISTERED_SCREENS.add(
+-                            enchantmentScreen
+-                    )) {
+-
+-                        /*
+-                         * =================================
+-                         * WŁASNE TŁO 176x194
+-                         * =================================
+-                         *
+-                         * Vanilla najpierw rysuje swoje GUI.
+-                         *
+-                         * Następnie my rysujemy NASZĄ CAŁĄ
+-                         * teksturę 176x194 w dokładnie tym
+-                         * samym miejscu.
+-                         *
+-                         * Dzięki temu na ekranie zostaje
+-                         * tylko jeden layout.
+-                         */
+-                        ScreenEvents.afterBackground(
+-                                enchantmentScreen
+-                        ).register(
+-                                (
+-                                        currentScreen,
+-                                        graphics,
+-                                        mouseX,
+-                                        mouseY,
+-                                        tickProgress
+-                                ) -> {
+-
+-                                    int left =
+-                                            (currentScreen.width
+-                                                    - GUI_WIDTH)
+-                                                    / 2;
+-
+-                                    /*
+-                                     * Najważniejsze:
+-                                     *
+-                                     * NIE używamy:
+-                                     *
+-                                     * (height - 194) / 2
+-                                     *
+-                                     * bo wtedy całe GUI
+-                                     * przesunęłoby się do góry.
+-                                     *
+-                                     * Używamy pozycji vanilla.
+-                                     */
+-                                    int top =
+-                                            (currentScreen.height
+-                                                    - VANILLA_GUI_HEIGHT)
+-                                                    / 2;
+-
+-                                    graphics.blit(
+-                                            RenderPipelines.GUI_TEXTURED,
+-                                            ENCHANTING_TABLE_TEXTURE,
+-
+-                                            left,
+-                                            top,
+-
+-                                            0,
+-                                            0,
+-
+-                                            GUI_WIDTH,
+-                                            GUI_HEIGHT,
+-
+-                                            GUI_WIDTH,
+-                                            GUI_HEIGHT
+-                                    );
+-                                }
+-                        );
+-
+-                        /*
+-                         * =================================
+-                         * KOSZT REROLLA
+-                         * =================================
+-                         */
+-                        ScreenEvents.afterExtract(
+-                                enchantmentScreen
+-                        ).register(
+-                                (
+-                                        currentScreen,
+-                                        graphics,
+-                                        mouseX,
+-                                        mouseY,
+-                                        tickProgress
+-                                ) -> {
+-
+-                                    if (!(client.player.containerMenu
+-                                            instanceof EnchantmentMenu enchantmentMenu)) {
+-                                        return;
+-                                    }
+-
+-                                    Button currentButton =
+-                                            REROLL_BUTTONS.get(
+-                                                    enchantmentScreen
+-                                            );
+-
+-                                    if (currentButton == null) {
+-                                        return;
+-                                    }
+-
+-                                    /*
+-                                     * Czy jest item?
+-                                     */
+-                                    boolean hasItem =
+-                                            !enchantmentMenu
+-                                                    .getSlot(0)
+-                                                    .getItem()
+-                                                    .isEmpty();
+-
+-                                    /*
+-                                     * Czy jest >=3 lapisu?
+-                                     */
+-                                    boolean enoughLapis =
+-                                            enchantmentMenu
+-                                                    .getSlot(1)
+-                                                    .getItem()
+-                                                    .getCount()
+-                                                    >= REROLL_COST;
+-
+-                                    currentButton.active =
+-                                            hasItem && enoughLapis;
+-
+-                                    int left =
+-                                            (currentScreen.width
+-                                                    - GUI_WIDTH)
+-                                                    / 2;
+-
+-                                    int top =
+-                                            (currentScreen.height
+-                                                    - VANILLA_GUI_HEIGHT)
+-                                                    / 2;
+-
+-                                    int currentButtonX =
+-                                            left + 108;
+-
+-                                    int currentButtonY =
+-                                            top + 170;
+-
+-                                    /*
+-                                     * 3
+-                                     */
+-                                    graphics.text(
+-                                            client.font,
+-                                            "3",
+-
+-                                            currentButtonX - 22,
+-                                            currentButtonY + 6,
+-
+-                                            enoughLapis
+-                                                    ? 0xFFFFFFFF
+-                                                    : 0xFF777777,
+-
+-                                            true
+-                                    );
+-
+-                                    /*
+-                                     * Lapis
+-                                     */
+-                                    graphics.item(
+-                                            new ItemStack(
+-                                                    Items.LAPIS_LAZULI
+-                                            ),
++                    if (REGISTERED_SCREENS.add(enchantmentScreen)) {
++                        registerRenderEvents(client, enchantmentScreen);
++                    }
++                }
++        );
++    }
++
++    private static void registerRenderEvents(
++            Minecraft client,
++            EnchantmentScreen enchantmentScreen
++    ) {
+ 
+-                                            currentButtonX - 12,
+-                                            currentButtonY + 2
+-                                    );
+-                                }
+-                        );
+-
+-                        /*
+-                         * =================================
+-                         * AKTUALIZACJA BUTTONA
+-                         * =================================
+-                         */
+-                        ScreenEvents.afterTick(
+-                                enchantmentScreen
+-                        ).register(
+-                                currentScreen -> {
+-
+-                                    if (!(client.player.containerMenu
+-                                            instanceof EnchantmentMenu enchantmentMenu)) {
+-                                        return;
+-                                    }
+-
+-                                    Button currentButton =
+-                                            REROLL_BUTTONS.get(
+-                                                    enchantmentScreen
+-                                            );
+-
+-                                    if (currentButton == null) {
+-                                        return;
+-                                    }
+-
+-                                    boolean hasItem =
+-                                            !enchantmentMenu
+-                                                    .getSlot(0)
+-                                                    .getItem()
+-                                                    .isEmpty();
+-
+-                                    boolean enoughLapis =
+-                                            enchantmentMenu
+-                                                    .getSlot(1)
+-                                                    .getItem()
+-                                                    .getCount()
+-                                                    >= REROLL_COST;
+-
+-                                    currentButton.active =
+-                                            hasItem && enoughLapis;
+-                                }
+-                        );
++        /*
++         * DOLNA CZĘŚĆ TŁA.
++         *
++         * Vanilla w tym momencie już narysowała swoje tło oraz przyciski
++         * enchantów. Rysujemy tylko wiersze tekstury od SEAM_Y w dół, żeby
++         * nie zakryć vanillowej góry (nazw enchantów, ikon poziomów itd.).
++         *
++         * Ostatnie dwa argumenty to rozmiar PLIKU PNG (256x256).
++         */
++        ScreenEvents.afterBackground(enchantmentScreen).register(
++                (currentScreen, graphics, mouseX, mouseY, tickProgress) -> {
++
++                    AbstractContainerScreenAccessor accessor =
++                            (AbstractContainerScreenAccessor) currentScreen;
++
++                    int left = accessor.everything$getLeftPos();
++                    int top = accessor.everything$getTopPos();
++
++                    graphics.blit(
++                            RenderPipelines.GUI_TEXTURED,
++                            ENCHANTING_TABLE_TEXTURE,
++
++                            left,
++                            top + SEAM_Y,
++
++                            0,
++                            SEAM_Y,
++
++                            GUI_WIDTH,
++                            GUI_HEIGHT - SEAM_Y,
++
++                            TEXTURE_SIZE,
++                            TEXTURE_SIZE
++                    );
++                }
++        );
++
++        /*
++         * KOSZT REROLLA: "3 [lapis]" po lewej stronie przycisku.
++         */
++        ScreenEvents.afterExtract(enchantmentScreen).register(
++                (currentScreen, graphics, mouseX, mouseY, tickProgress) -> {
++
++                    if (client.player == null
++                            || !(client.player.containerMenu
++                            instanceof EnchantmentMenu menu)) {
++                        return;
++                    }
++
++                    AbstractContainerScreenAccessor accessor =
++                            (AbstractContainerScreenAccessor) currentScreen;
++
++                    int buttonX = accessor.everything$getLeftPos() + BUTTON_X;
++                    int buttonY = accessor.everything$getTopPos() + BUTTON_Y;
++
++                    boolean enoughLapis = hasEnoughLapis(menu);
++
++                    // Ikona lapisa (16x16), tuż przy przycisku.
++                    int iconX = buttonX - 18;
++                    int iconY = buttonY + (BUTTON_HEIGHT - 16) / 2;
++
++                    graphics.item(
++                            new ItemStack(Items.LAPIS_LAZULI),
++                            iconX,
++                            iconY
++                    );
++
++                    // Cyfra "3" po lewej stronie ikony.
++                    graphics.text(
++                            client.font,
++                            String.valueOf(REROLL_COST),
++                            iconX - 8,
++                            buttonY + (BUTTON_HEIGHT - 8) / 2,
++                            enoughLapis ? 0xFF404040 : 0xFFA03030,
++                            false
++                    );
++                }
++        );
++
++        /*
++         * AKTYWNOŚĆ PRZYCISKU: item w stole + min. 3 lapisy + są jakieś oferty.
++         */
++        ScreenEvents.afterTick(enchantmentScreen).register(
++                currentScreen -> {
++
++                    if (client.player == null
++                            || !(client.player.containerMenu
++                            instanceof EnchantmentMenu menu)) {
++                        return;
++                    }
++
++                    Button button = REROLL_BUTTONS.get(enchantmentScreen);
++
++                    if (button != null) {
++                        button.active = canReroll(menu);
+                     }
+                 }
+         );
+     }
+-}
+\ No newline at end of file
++
++    /**
++     * Przesuwa sloty ekwipunku gracza w dół o EXTRA_HEIGHT.
++     * Robi to tylko raz na dane menu.
++     */
++    private static void shiftInventorySlots(EnchantmentMenu menu) {
++
++        if (!SHIFTED_MENUS.add(menu)) {
++            return;
++        }
++
++        // 0 = item, 1 = lapis, 2+ = ekwipunek i hotbar gracza.
++        for (int i = 2; i < menu.slots.size(); i++) {
++
++            Slot slot = menu.slots.get(i);
++
++            ((SlotAccessor) slot).everything$setY(slot.y + EXTRA_HEIGHT);
++        }
++    }
++
++    private static boolean hasEnoughLapis(EnchantmentMenu menu) {
++        return menu.getSlot(1).getItem().getCount() >= REROLL_COST;
++    }
++
++    private static boolean hasOffers(EnchantmentMenu menu) {
++        return menu.costs[0] > 0 || menu.costs[1] > 0 || menu.costs[2] > 0;
++    }
++
++    private static boolean canReroll(EnchantmentMenu menu) {
++        return !menu.getSlot(0).getItem().isEmpty()
++                && hasOffers(menu)
++                && hasEnoughLapis(menu);
++    }
++}
+diff --git a/src/main/java/net/hehex/everythingmod/mixin/EnchantmentMenuMixin.java b/src/main/java/net/hehex/everythingmod/mixin/EnchantmentMenuMixin.java
+index a323d96..8319275 100644
+--- a/src/main/java/net/hehex/everythingmod/mixin/EnchantmentMenuMixin.java
++++ b/src/main/java/net/hehex/everythingmod/mixin/EnchantmentMenuMixin.java
+@@ -51,19 +51,27 @@ public abstract class EnchantmentMenuMixin {
+             return;
+         }
+ 
++        // Przedmiot musi mieć jakiekolwiek oferty (inaczej nie zabieramy lapisu na darmo).
++        if (menu.costs[0] <= 0 && menu.costs[1] <= 0 && menu.costs[2] <= 0) {
++            cir.setReturnValue(false);
++            return;
++        }
++
+         // Muszą być co najmniej 3 lapisy.
+         if (menu.getSlot(1).getItem().getCount() < REROLL_LAPIS_COST) {
+             cir.setReturnValue(false);
+             return;
+         }
+ 
+-        // Zabierz 3 lapisy ze slotu lapisu.
+-        menu.getSlot(1).remove(REROLL_LAPIS_COST);
++        // Zabierz 3 lapisy (tryb kreatywny, tak jak w vanilla, nic nie kosztuje).
++        if (!player.hasInfiniteMaterials()) {
++            menu.getSlot(1).remove(REROLL_LAPIS_COST);
++        }
+ 
+         // Wylosuj nowe ziarno enchantingu.
+         enchantmentSeed.set(RandomSource.create().nextInt());
+ 
+-        // Ponownie wygeneruj oferty.
++        // Ponownie wygeneruj oferty (serwer wyśle je klientowi przy broadcastChanges).
+         menu.slotsChanged(enchantSlots);
+ 
+         cir.setReturnValue(true);
+diff --git a/src/main/java/net/hehex/everythingmod/mixin/client/AbstractContainerScreenAccessor.java b/src/main/java/net/hehex/everythingmod/mixin/client/AbstractContainerScreenAccessor.java
+index 53df02b..3e03a22 100644
+--- a/src/main/java/net/hehex/everythingmod/mixin/client/AbstractContainerScreenAccessor.java
++++ b/src/main/java/net/hehex/everythingmod/mixin/client/AbstractContainerScreenAccessor.java
+@@ -16,7 +16,9 @@ public interface AbstractContainerScreenAccessor {
+     @Accessor("inventoryLabelY")
+     void everything$setInventoryLabelY(int y);
+ 
++    @Accessor("leftPos")
++    int everything$getLeftPos();
++
+     @Accessor("topPos")
+-    @Mutable
+-    void everything$setTopPos(int top);
+-}
+\ No newline at end of file
++    int everything$getTopPos();
++}
