@@ -184,7 +184,7 @@ public class EnchantingRerollClient implements ClientModInitializer {
     ) {
 
         /*
-         * DOLNA CZĘŚĆ TŁA.
+         * DOLNA CZĘŚĆ TŁA + KOSZT REROLLA.
          *
          * Vanilla w tym momencie już narysowała swoje tło oraz przyciski
          * enchantów. Rysujemy tylko wiersze tekstury od SEAM_Y w dół, żeby
@@ -217,28 +217,23 @@ public class EnchantingRerollClient implements ClientModInitializer {
                             TEXTURE_SIZE,
                             TEXTURE_SIZE
                     );
-                }
-        );
 
-        /*
-         * KOSZT REROLLA: "3 [lapis]" po lewej stronie przycisku.
-         */
-        ScreenEvents.afterExtract(enchantmentScreen).register(
-                (currentScreen, graphics, mouseX, mouseY, tickProgress) -> {
-
+                    /*
+                     * KOSZT REROLLA: "3 [lapis]" po lewej stronie przycisku.
+                     *
+                     * Rysujemy to TUTAJ (na etapie tła), a nie w afterExtract.
+                     * afterExtract odpala się dopiero po złożeniu tooltipów, więc
+                     * ikona i cyfra wyświetlały się nad tooltipem itemu.
+                     * Na etapie tła są pod slotami, widgetami i tooltipami.
+                     */
                     if (client.player == null
                             || !(client.player.containerMenu
                             instanceof EnchantmentMenu menu)) {
                         return;
                     }
 
-                    AbstractContainerScreenAccessor accessor =
-                            (AbstractContainerScreenAccessor) currentScreen;
-
-                    int buttonX = accessor.everything$getLeftPos() + BUTTON_X;
-                    int buttonY = accessor.everything$getTopPos() + BUTTON_Y;
-
-                    boolean enoughLapis = hasEnoughLapis(menu);
+                    int buttonX = left + BUTTON_X;
+                    int buttonY = top + BUTTON_Y;
 
                     // Ikona lapisa (16x16), tuż przy przycisku.
                     int iconX = buttonX - 18;
@@ -256,7 +251,7 @@ public class EnchantingRerollClient implements ClientModInitializer {
                             String.valueOf(REROLL_COST),
                             iconX - 8,
                             buttonY + (BUTTON_HEIGHT - 8) / 2,
-                            enoughLapis ? 0xFF404040 : 0xFFA03030,
+                            hasEnoughLapis(menu) ? 0xFF404040 : 0xFFA03030,
                             false
                     );
                 }
