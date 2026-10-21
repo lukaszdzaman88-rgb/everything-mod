@@ -8,7 +8,12 @@
 
   "tooltip.xptalisman.stored_xp" : "Stored Level: %s (%s XP)",
 
-  "gui.everything_mod.enchanting.reroll": "Re-roll"
+  "gui.everything_mod.enchanting.reroll": "Re-roll",
+
+  "gui.everything_mod.grindstone.title": "Enchantments",
+  "gui.everything_mod.grindstone.select_all": "Select all",
+  "gui.everything_mod.grindstone.deselect_all": "Deselect all",
+  "gui.everything_mod.grindstone.curse_hint": "Curses cannot be removed"
 
 
 

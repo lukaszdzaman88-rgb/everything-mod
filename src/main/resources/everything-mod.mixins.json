@@ -3,7 +3,9 @@
 	"package": "net.hehex.everythingmod.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"mixins": [
-		"EnchantmentMenuMixin"
+		"AbstractContainerMenuMixin",
+		"EnchantmentMenuMixin",
+		"GrindstoneMenuMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
