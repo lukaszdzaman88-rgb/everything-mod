@@ -75,9 +75,6 @@ public class EnchantingRerollClient implements ClientModInitializer {
                     "textures/gui/enchanting_table_extended.png"
             );
 
-    private static final Set<EnchantmentScreen> REGISTERED_SCREENS =
-            Collections.newSetFromMap(new WeakHashMap<>());
-
     private static final WeakHashMap<EnchantmentScreen, Button> REROLL_BUTTONS =
             new WeakHashMap<>();
 
@@ -168,12 +165,12 @@ public class EnchantingRerollClient implements ClientModInitializer {
                     REROLL_BUTTONS.put(enchantmentScreen, rerollButton);
 
                     /*
-                     * Zdarzenia renderowania rejestrujemy tylko raz na ekran
-                     * (init wywołuje się ponownie np. przy zmianie rozmiaru okna).
+                     * Fabric tworzy zdarzenia ekranu OD NOWA przy każdym init/resize,
+                     * więc rejestrujemy je przy każdym AFTER_INIT (bez strażnika
+                     * "tylko raz" - inaczej po zmianie rozmiaru okna dolna część tła
+                     * i koszt lapisa by zniknęły).
                      */
-                    if (REGISTERED_SCREENS.add(enchantmentScreen)) {
-                        registerRenderEvents(client, enchantmentScreen);
-                    }
+                    registerRenderEvents(client, enchantmentScreen);
                 }
         );
     }

@@ -14,6 +14,9 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Wspólna logika (klient + serwer) dla ulepszonego Grindstone'a.
  *
@@ -36,8 +39,20 @@ public final class GrindstoneEnchants {
     /** Maska idzie w jednym DataSlot (16 bitów ze znakiem) => max 15 enchantów. */
     public static final int MAX_ENTRIES = 15;
 
-    /** ID przycisku "Select all" wysyłane do serwera (0..14 to przełączniki enchantów). */
-    public static final int SELECT_ALL_BUTTON_ID = 100;
+    /**
+     * Logowanie diagnostyczne (klik klienta, odbiór na serwerze, budowa wyniku).
+     * Po sprawdzeniu, że wszystko działa, możesz ustawić na false.
+     */
+    public static final boolean DEBUG_LOG = true;
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("everything-mod/grindstone");
+
+    /** Log diagnostyczny (tylko gdy DEBUG_LOG = true). Format jak w slf4j: "{}" */
+    public static void debug(String message, Object... args) {
+        if (DEBUG_LOG) {
+            LOGGER.info(message, args);
+        }
+    }
 
     /** Ile % maksymalnej wytrzymałości zabiera odczarowanie. */
     public static final int DURABILITY_PENALTY_PERCENT = 10;
@@ -132,6 +147,15 @@ public final class GrindstoneEnchants {
         }
 
         return builder.toString();
+    }
+
+    /**
+     * Skrót podpisu - klient wysyła go razem z zaznaczeniem, a serwer odrzuca
+     * zaznaczenie, jeśli item w międzyczasie się zmienił (opóźnienie sieci).
+     * String.hashCode() jest ściśle zdefiniowany, więc jest taki sam po obu stronach.
+     */
+    public static int signatureHash(ItemStack single) {
+        return signature(single).hashCode();
     }
 
     /** Maska wszystkich enchantów, które wolno usunąć. */

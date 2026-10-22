@@ -8,7 +8,6 @@ import net.hehex.everythingmod.grindstone.GrindstoneSelection;
 import net.minecraft.world.Container;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
-import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.GrindstoneMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
@@ -24,8 +23,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
  * Selektywne odczarowywanie w Grindstone:
- *  - stan zaznaczenia (maska bitowa) trzymany w DataSlot => automatycznie
- *    synchronizowany serwer -> klient,
+ *  - zaznaczenie (maska bitowa) trzymane po obu stronach; klient wysyła je pakietem,
  *  - wynik = item bez zaznaczonych enchantów, -10% wytrzymałości,
  *  - slot wyniku podmieniony na własny (XP tylko za usunięte enchanty).
  */
@@ -45,10 +43,13 @@ public abstract class GrindstoneMenuMixin extends AbstractContainerMenu implemen
     private ContainerLevelAccess access;
 
     @Unique
-    private DataSlot everything$selection;
+    private int everything$selectionMask = 0;
 
     @Unique
     private String everything$signature = "";
+
+    @Unique
+    private boolean everything$initDone = false;
 
     // Konstruktor wymagany tylko po to, żeby klasa się skompilowała (Mixin go odrzuca).
     protected GrindstoneMenuMixin(MenuType<?> menuType, int containerId) {
@@ -61,12 +62,11 @@ public abstract class GrindstoneMenuMixin extends AbstractContainerMenu implemen
      */
     @Inject(method = "<init>", at = @At("RETURN"))
     private void everything$init(CallbackInfo ci) {
-        if (this.everything$selection != null) {
+        if (this.everything$initDone) {
             return;
         }
 
-        this.everything$selection = DataSlot.standalone();
-        this.addDataSlot(this.everything$selection);
+        this.everything$initDone = true;
 
         // Podmień vanillowy slot wyniku (indeks 2) na nasz.
         Slot vanilla = this.slots.get(2);
@@ -94,10 +94,6 @@ public abstract class GrindstoneMenuMixin extends AbstractContainerMenu implemen
             ItemStack additional,
             CallbackInfoReturnable<ItemStack> cir
     ) {
-        if (this.everything$selection == null) {
-            return;
-        }
-
         ItemStack single = GrindstoneEnchants.singleInput(input, additional);
 
         // Inny item / inny zestaw enchantów => zaznaczenie od zera.
@@ -105,24 +101,27 @@ public abstract class GrindstoneMenuMixin extends AbstractContainerMenu implemen
 
         if (!signature.equals(this.everything$signature)) {
             this.everything$signature = signature;
-            this.everything$selection.set(0);
+            this.everything$selectionMask = 0;
         }
 
         if (single.isEmpty()) {
             return;
         }
 
-        cir.setReturnValue(
-                GrindstoneEnchants.buildResult(single, this.everything$selection.get())
-        );
+        ItemStack result = GrindstoneEnchants.buildResult(single, this.everything$selectionMask);
+
+        if (!this.everything$isClient()) {
+            GrindstoneEnchants.debug(
+                    "[Grindstone][serwer] wynik: maska={} -> {}",
+                    this.everything$selectionMask,
+                    result.isEmpty() ? "pusty" : result
+            );
+        }
+
+        cir.setReturnValue(result);
     }
 
     // ------------------------------------------------ GrindstoneSelection
-
-    @Override
-    public int everything$getSelectionMask() {
-        return this.everything$selection == null ? 0 : this.everything$selection.get();
-    }
 
     @Override
     public List<GrindstoneEnchants.Entry> everything$getEntries() {
@@ -135,34 +134,39 @@ public abstract class GrindstoneMenuMixin extends AbstractContainerMenu implemen
     }
 
     @Override
-    public boolean everything$handleButton(int buttonId) {
-        if (this.everything$selection == null) {
-            return false;
-        }
+    public int everything$getSelectionMask() {
+        return this.everything$selectionMask;
+    }
 
+    @Override
+    public int everything$getSignatureHash() {
+        return GrindstoneEnchants.signatureHash(GrindstoneEnchants.singleInput(
+                this.repairSlots.getItem(0),
+                this.repairSlots.getItem(1)
+        ));
+    }
+
+    @Override
+    public void everything$setSelectionMask(int mask) {
         List<GrindstoneEnchants.Entry> entries = this.everything$getEntries();
 
-        if (entries.isEmpty()) {
+        this.everything$selectionMask = mask & GrindstoneEnchants.removableMask(entries);
+
+        // Natychmiastowy podgląd wyniku (serwer i tak przyśle swój).
+        this.slotsChanged(this.repairSlots);
+    }
+
+    @Override
+    public boolean everything$applyRemoteSelection(int mask, int signatureHash) {
+        List<GrindstoneEnchants.Entry> entries = this.everything$getEntries();
+
+        if (entries.isEmpty() || signatureHash != this.everything$getSignatureHash()) {
             return false;
         }
 
-        int removable = GrindstoneEnchants.removableMask(entries);
-        int mask = this.everything$selection.get() & removable;
+        this.everything$selectionMask = mask & GrindstoneEnchants.removableMask(entries);
 
-        if (buttonId == GrindstoneEnchants.SELECT_ALL_BUTTON_ID) {
-            // Wszystko zaznaczone => odznacz; w przeciwnym razie zaznacz wszystko.
-            mask = (mask == removable) ? 0 : removable;
-        } else if (buttonId >= 0
-                && buttonId < entries.size()
-                && entries.get(buttonId).removable()) {
-            mask ^= 1 << buttonId;
-        } else {
-            return false;
-        }
-
-        this.everything$selection.set(mask);
-
-        // Przelicz wynik (wywoła createResult -> computeResult + broadcastChanges).
+        // Przelicz wynik (createResult -> computeResult -> broadcastChanges).
         this.slotsChanged(this.repairSlots);
 
         return true;
@@ -179,11 +183,17 @@ public abstract class GrindstoneMenuMixin extends AbstractContainerMenu implemen
             // Odczarowanie: XP tylko za zaznaczone enchanty.
             return GrindstoneEnchants.selectedCost(
                     GrindstoneEnchants.entriesOf(single),
-                    this.everything$getSelectionMask()
+                    this.everything$selectionMask
             );
         }
 
         // Łączenie dwóch itemów: jak w vanilla (wszystkie enchanty oprócz klątw).
         return GrindstoneEnchants.nonCurseCost(top) + GrindstoneEnchants.nonCurseCost(bottom);
+    }
+
+    /** Klient ma ContainerLevelAccess.NULL, serwer prawdziwy. */
+    @Unique
+    private boolean everything$isClient() {
+        return this.access == ContainerLevelAccess.NULL;
     }
 }

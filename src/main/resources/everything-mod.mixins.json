@@ -3,7 +3,6 @@
 	"package": "net.hehex.everythingmod.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"mixins": [
-		"AbstractContainerMenuMixin",
 		"EnchantmentMenuMixin",
 		"GrindstoneMenuMixin"
 	],

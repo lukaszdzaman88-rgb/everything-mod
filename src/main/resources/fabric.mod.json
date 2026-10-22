@@ -16,7 +16,8 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"net.hehex.everythingmod.EverythingMod"
+			"net.hehex.everythingmod.EverythingMod",
+			"net.hehex.everythingmod.grindstone.GrindstoneNetworking"
 
 		],
 		"client": [
