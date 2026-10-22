@@ -58,21 +58,23 @@ public class GrindstoneSelectClient implements ClientModInitializer {
     private static final int SLOT_LIGHT = 0xFFFFFFFF;
     private static final int SLOT_FILL = 0xFF8B8B8B;
 
-    private static final int HOVER_TINT = 0x33000000;
-    private static final int SELECTED_TINT = 0x4455AA55;
+    // Białe, półprzezroczyste podświetlenie (jak w slotach vanilla) i wyraźna, jasna zieleń.
+    private static final int HOVER_TINT = 0x66FFFFFF;
+    private static final int SELECTED_TINT = 0x8050E050;
 
     private static final int BUTTON_NORMAL = 0xFF8B8B8B;
     private static final int BUTTON_HOVER = 0xFFA0A0A0;
-    private static final int BUTTON_ACTIVE = 0xFF86BC86;
-    private static final int BUTTON_ACTIVE_HOVER = 0xFF9DD09D;
+    private static final int BUTTON_ACTIVE = 0xFF7FD67F;
+    private static final int BUTTON_ACTIVE_HOVER = 0xFF9AEB9A;
     private static final int BUTTON_DISABLED = 0xFFA8A8A8;
 
     private static final int TEXT_NORMAL = 0xFF303030;
-    private static final int TEXT_SELECTED = 0xFF1B5E1B;
+    private static final int TEXT_SELECTED = 0xFF083B08;
     private static final int TEXT_CURSE = 0xFF9A2A2A;
     private static final int TEXT_TITLE = 0xFF404040;
     private static final int TEXT_HINT = 0xFF7A4A4A;
-    private static final int CHECK_COLOR = 0xFF1E8E1E;
+    private static final int CHECK_FILL = 0xFF6FE06F;
+    private static final int CHECK_COLOR = 0xFF083B08;
 
     /** Klik poza wierszami ("Select all" ma własny kod). */
     private static final int NO_HIT = -1;
@@ -451,6 +453,9 @@ public class GrindstoneSelectClient implements ClientModInitializer {
         if (!checked) {
             return;
         }
+
+        // Zaznaczony: jasnozielone wnętrze + ciemny ptaszek (wysoki kontrast).
+        graphics.fill(x + 1, y + 1, x + CHECKBOX - 1, y + CHECKBOX - 1, CHECK_FILL);
 
         // Wnętrze ma 6x6 px (od x+1, y+1).
         int[][] pixels = {
