@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "minecraft:enchanting_table",
+    "minecraft:grindstone"
+  ],
+  "result": {
+    "id": "everything-mod:defusion_table"
+  }
+}

@@ -13,7 +13,14 @@
   "gui.everything_mod.grindstone.title": "Enchantments",
   "gui.everything_mod.grindstone.select_all": "Select all",
   "gui.everything_mod.grindstone.deselect_all": "Deselect all",
-  "gui.everything_mod.grindstone.curse_hint": "Curses cannot be removed"
+  "gui.everything_mod.grindstone.curse_hint": "Curses cannot be removed",
+
+  "block.everything-mod.defusion_table": "Defusion Table",
+  "item.everything-mod.defusion_table": "Defusion Table",
+  "container.everything_mod.defusion_table": "Defusion Table",
+  "gui.everything_mod.defusion.title": "Enchantments",
+  "gui.everything_mod.defusion.need_book": "Needs an empty book",
+  "gui.everything_mod.defusion.pick_one": "Pick one enchantment"
 
 
 

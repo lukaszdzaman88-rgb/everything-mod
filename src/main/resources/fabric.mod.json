@@ -17,12 +17,14 @@
 	"entrypoints": {
 		"main": [
 			"net.hehex.everythingmod.EverythingMod",
-			"net.hehex.everythingmod.grindstone.GrindstoneNetworking"
+			"net.hehex.everythingmod.grindstone.GrindstoneNetworking",
+			"net.hehex.everythingmod.defusion.DefusionTableMod"
 
 		],
 		"client": [
 			"net.hehex.everythingmod.client.EnchantingRerollClient",
-			"net.hehex.everythingmod.client.GrindstoneSelectClient"
+			"net.hehex.everythingmod.client.GrindstoneSelectClient",
+			"net.hehex.everythingmod.client.DefusionTableClient"
 		],
 		"fabric-datagen": [
 			"net.hehex.everythingmod.EverythingModDataGenerator"
