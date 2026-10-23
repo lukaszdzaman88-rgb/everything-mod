@@ -14,10 +14,14 @@ public class DefusionTableMod implements ModInitializer {
     @Override
     public void onInitialize() {
 
-        DefusionTable.init(); // blok + przedmiot + typ menu
+        DefusionTable.init();  // blok + przedmiot + typ menu
+        RunicBookshelf.init(); // runiczny regał
 
         CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS)
-                .register(entries -> entries.accept(DefusionTable.ITEM));
+                .register(entries -> {
+                    entries.accept(DefusionTable.ITEM);
+                    entries.accept(RunicBookshelf.ITEM);
+                });
 
         PayloadTypeRegistry.serverboundPlay().register(
                 DefusionSelectPayload.TYPE,

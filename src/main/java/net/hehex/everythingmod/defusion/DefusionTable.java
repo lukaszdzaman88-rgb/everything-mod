@@ -36,7 +36,7 @@ public final class DefusionTable {
             BuiltInRegistries.BLOCK,
             BLOCK_KEY,
             new DefusionTableBlock(
-                    BlockBehaviour.Properties.ofFullCopy(Blocks.CARTOGRAPHY_TABLE).setId(BLOCK_KEY)
+                    BlockBehaviour.Properties.ofFullCopy(Blocks.ENCHANTING_TABLE).setId(BLOCK_KEY)
             )
     );
 

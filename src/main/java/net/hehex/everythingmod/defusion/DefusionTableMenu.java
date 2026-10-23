@@ -3,18 +3,25 @@ package net.hehex.everythingmod.defusion;
 import java.util.List;
 
 import net.hehex.everythingmod.grindstone.GrindstoneEnchants;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.resources.Identifier;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.ResultContainer;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
+import net.minecraft.world.level.block.EnchantingTableBlock;
 
 /**
  * Menu Defusion Table.
@@ -23,8 +30,13 @@ import net.minecraft.world.item.enchantment.ItemEnchantments;
  *   slot 1: pusta książka (zostanie zużyta)
  *   slot 2: wynik = zaklęta książka z JEDNYM wybranym zaklęciem (też klątwą)
  *
+ * Wymagania: min. {@link DefusionConfig#MIN_SHELVES} Runic Bookshelf wokół stołu
+ * (układ jak przy stole do enchantowania) oraz poziomy doświadczenia
+ * ({@link DefusionConfig#levelCost}), niższe przy 10 i 15 regałach.
+ *
  * Wybór (indeks na liście zaklęć) jest trzymany po obu stronach; klient wysyła go
- * pakietem {@link DefusionSelectPayload}.
+ * pakietem {@link DefusionSelectPayload}. Liczba regałów jest liczona na serwerze
+ * i synchronizowana do klienta przez DataSlot.
  */
 public class DefusionTableMenu extends AbstractContainerMenu {
 
@@ -36,6 +48,11 @@ public class DefusionTableMenu extends AbstractContainerMenu {
     private static final int HOTBAR_START = 30;
     private static final int INV_END = 39;
 
+    /** Dźwięk stołu do enchantowania (zagrany z niższą tonacją). */
+    private static final SoundEvent TABLE_SOUND = SoundEvent.createVariableRangeEvent(
+            Identifier.fromNamespaceAndPath("minecraft", "block.enchantment_table.use")
+    );
+
     private final Container inputSlots = new SimpleContainer(2) {
         @Override
         public void setChanged() {
@@ -46,6 +63,9 @@ public class DefusionTableMenu extends AbstractContainerMenu {
 
     private final Container resultSlots = new ResultContainer();
     private final ContainerLevelAccess access;
+
+    /** Liczba Runic Bookshelf wokół stołu (liczona na serwerze, synchronizowana do klienta). */
+    private final DataSlot shelves = DataSlot.standalone();
 
     /** Indeks wybranego zaklęcia na liście albo -1. */
     private int selection = -1;
@@ -62,33 +82,94 @@ public class DefusionTableMenu extends AbstractContainerMenu {
         super(DefusionTable.MENU, containerId);
         this.access = access;
 
-        this.addSlot(new Slot(this.inputSlots, ITEM_SLOT, 31, 35) {
+        this.addSlot(new Slot(this.inputSlots, ITEM_SLOT, 31, 39) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return !GrindstoneEnchants.allEntries(stack).isEmpty();
             }
         });
 
-        this.addSlot(new Slot(this.inputSlots, BOOK_SLOT, 62, 35) {
+        this.addSlot(new Slot(this.inputSlots, BOOK_SLOT, 62, 39) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return stack.is(Items.BOOK);
             }
         });
 
-        this.addSlot(new Slot(this.resultSlots, RESULT_SLOT, 126, 35) {
+        this.addSlot(new Slot(this.resultSlots, RESULT_SLOT, 126, 39) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return false;
             }
 
+            /** Bez wystarczającej liczby poziomów nie da się zabrać wyniku. */
+            @Override
+            public boolean mayPickup(Player player) {
+                return DefusionTableMenu.this.canAfford(player);
+            }
+
             @Override
             public void onTake(Player player, ItemStack carried) {
-                DefusionTableMenu.this.consumeInputs();
+                DefusionTableMenu.this.finishCrafting(player);
             }
         });
 
         this.addStandardInventorySlots(inventory, 8, 84);
+
+        this.addDataSlot(this.shelves);
+        this.updateShelves();
+    }
+
+    // ------------------------------------------------------------ regały i koszt
+
+    /** Liczy Runic Bookshelf w tym samym układzie co vanillowy stół do enchantowania. */
+    private int countShelves() {
+        int[] count = {0};
+
+        this.access.execute((level, pos) -> {
+            for (BlockPos offset : EnchantingTableBlock.BOOKSHELF_OFFSETS) {
+                boolean isShelf = level.getBlockState(pos.offset(offset)).is(RunicBookshelf.TAG);
+
+                // Blok pomiędzy stołem a regałem musi przepuszczać "moc" (np. powietrze).
+                boolean clearPath = level.getBlockState(
+                        pos.offset(offset.getX() / 2, offset.getY(), offset.getZ() / 2)
+                ).is(BlockTags.ENCHANTMENT_POWER_TRANSMITTER);
+
+                if (isShelf && clearPath) {
+                    count[0]++;
+                }
+            }
+        });
+
+        return count[0];
+    }
+
+    /** Tylko serwer ma prawdziwy ContainerLevelAccess; klient dostaje wartość z DataSlot. */
+    private void updateShelves() {
+        if (this.access != ContainerLevelAccess.NULL) {
+            this.shelves.set(this.countShelves());
+        }
+    }
+
+    public int getShelfCount() {
+        return this.shelves.get();
+    }
+
+    public boolean hasEnoughShelves() {
+        return this.getShelfCount() >= DefusionConfig.MIN_SHELVES;
+    }
+
+    public int getDiscountPercent() {
+        return DefusionConfig.discountPercent(this.getShelfCount());
+    }
+
+    /** Koszt w poziomach przy aktualnej liczbie regałów. */
+    public int getLevelCost() {
+        return DefusionConfig.levelCost(this.getShelfCount());
+    }
+
+    public boolean canAfford(Player player) {
+        return player.hasInfiniteMaterials() || player.experienceLevel >= this.getLevelCost();
     }
 
     // ------------------------------------------------------------ logika
@@ -103,6 +184,8 @@ public class DefusionTableMenu extends AbstractContainerMenu {
     }
 
     private void createResult() {
+        this.updateShelves();
+
         ItemStack item = this.inputSlots.getItem(ITEM_SLOT);
         ItemStack book = this.inputSlots.getItem(BOOK_SLOT);
 
@@ -117,8 +200,10 @@ public class DefusionTableMenu extends AbstractContainerMenu {
         ItemStack result = ItemStack.EMPTY;
         List<GrindstoneEnchants.Entry> entries = this.getEntries();
 
+        // Na kliencie liczba regałów przychodzi z opóźnieniem; wynik i tak ustala serwer.
         if (!item.isEmpty()
                 && book.is(Items.BOOK)
+                && this.hasEnoughShelves()
                 && this.selection >= 0
                 && this.selection < entries.size()) {
 
@@ -136,12 +221,29 @@ public class DefusionTableMenu extends AbstractContainerMenu {
         this.broadcastChanges();
     }
 
-    /** Zabranie wyniku: niszczy JEDEN przedmiot i zużywa JEDNĄ książkę. */
-    private void consumeInputs() {
+    /**
+     * Zabranie wyniku: pobiera poziomy, niszczy JEDEN przedmiot, zużywa JEDNĄ książkę
+     * i gra dźwięk stołu do enchantowania z niższą tonacją.
+     */
+    private void finishCrafting(Player player) {
+        // Koszt liczymy PRZED zużyciem składników.
+        int cost = this.getLevelCost();
+
+        if (!player.hasInfiniteMaterials()) {
+            player.giveExperienceLevels(-cost);
+        }
+
         this.inputSlots.removeItem(ITEM_SLOT, 1);
         this.inputSlots.removeItem(BOOK_SLOT, 1);
 
-        this.access.execute((level, pos) -> level.levelEvent(1042, pos, 0)); // dźwięk
+        this.access.execute((level, pos) -> level.playSound(
+                null,
+                pos,
+                TABLE_SOUND,
+                SoundSource.BLOCKS,
+                1.0F,
+                DefusionConfig.SOUND_PITCH + level.getRandom().nextFloat() * 0.1F
+        ));
     }
 
     // ------------------------------------------------------------ stan wyboru
@@ -215,6 +317,11 @@ public class DefusionTableMenu extends AbstractContainerMenu {
             clicked = stack.copy();
 
             if (index == RESULT_SLOT) {
+                // Shift-klik na wynik też wymaga poziomów.
+                if (!slot.mayPickup(player)) {
+                    return ItemStack.EMPTY;
+                }
+
                 if (!this.moveItemStackTo(stack, INV_START, INV_END, true)) {
                     return ItemStack.EMPTY;
                 }

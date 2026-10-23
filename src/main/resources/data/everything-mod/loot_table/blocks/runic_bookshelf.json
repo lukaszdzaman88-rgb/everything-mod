@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "condition": {
+        "type": "minecraft:survives_explosion"
+      },
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "everything-mod:runic_bookshelf"
+        }
+      ],
+      "rolls": 1
+    }
+  ],
+  "random_sequence": "everything-mod:blocks/runic_bookshelf"
+}

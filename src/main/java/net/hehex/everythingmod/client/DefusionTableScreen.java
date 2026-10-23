@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.hehex.everythingmod.defusion.DefusionConfig;
 import net.hehex.everythingmod.defusion.DefusionSelectPayload;
 import net.hehex.everythingmod.defusion.DefusionTableMenu;
 import net.hehex.everythingmod.grindstone.GrindstoneEnchants;
@@ -55,6 +56,10 @@ public class DefusionTableScreen extends AbstractContainerScreen<DefusionTableMe
     private static final int CHECK_FILL = 0xFF6FE06F;
     private static final int CHECK_COLOR = 0xFF083B08;
 
+    private static final int INFO_OK = 0xFF1E7A1E;
+    private static final int INFO_BAD = 0xFFA02020;
+    private static final int INFO_MUTED = 0xFF7F7F7F;
+
     public DefusionTableScreen(DefusionTableMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
     }
@@ -91,14 +96,57 @@ public class DefusionTableScreen extends AbstractContainerScreen<DefusionTableMe
         }
 
         // "+" między przedmiotem a książką.
-        graphics.fill(x + 51, y + 42, x + 58, y + 44, PANEL_DARK);
-        graphics.fill(x + 54, y + 39, x + 56, y + 47, PANEL_DARK);
+        graphics.fill(x + 51, y + 46, x + 58, y + 48, PANEL_DARK);
+        graphics.fill(x + 54, y + 43, x + 56, y + 51, PANEL_DARK);
 
         // Strzałka w stronę wyniku.
-        graphics.fill(x + 84, y + 42, x + 102, y + 44, SLOT_FILL);
+        graphics.fill(x + 84, y + 46, x + 102, y + 48, SLOT_FILL);
         for (int i = 0; i < 6; i++) {
-            graphics.fill(x + 102 + i, y + 43 - (5 - i), x + 103 + i, y + 44 + (5 - i), SLOT_FILL);
+            graphics.fill(x + 102 + i, y + 47 - (5 - i), x + 103 + i, y + 48 + (5 - i), SLOT_FILL);
         }
+
+        this.drawInfoLines(graphics, x, y);
+    }
+
+    /** Dwie linie nad slotami: liczba Runic Bookshelf (ze zniżką) i koszt w poziomach. */
+    private void drawInfoLines(GuiGraphicsExtractor graphics, int x, int y) {
+        int shelves = this.menu.getShelfCount();
+        boolean enoughShelves = this.menu.hasEnoughShelves();
+        int discount = this.menu.getDiscountPercent();
+
+        // Linia 1: regały + (brakuje / zniżka).
+        String shelvesText = text("gui.everything_mod.defusion.shelves", shelves);
+
+        graphics.text(this.font, shelvesText, x + 8, y + 17, TEXT_TITLE, false);
+
+        int suffixX = x + 8 + this.font.width(shelvesText);
+
+        if (!enoughShelves) {
+            graphics.text(
+                    this.font,
+                    text("gui.everything_mod.defusion.shelves_need", DefusionConfig.MIN_SHELVES),
+                    suffixX, y + 17, INFO_BAD, false
+            );
+        } else if (discount > 0) {
+            graphics.text(
+                    this.font,
+                    text("gui.everything_mod.defusion.shelves_discount", discount),
+                    suffixX, y + 17, INFO_OK, false
+            );
+        }
+
+        // Linia 2: koszt (zielony - stać Cię, czerwony - brakuje poziomów, szary - brak regałów).
+        boolean afford = this.minecraft != null
+                && this.minecraft.player != null
+                && this.menu.canAfford(this.minecraft.player);
+
+        graphics.text(
+                this.font,
+                text("gui.everything_mod.defusion.cost", this.menu.getLevelCost()),
+                x + 8, y + 26,
+                !enoughShelves ? INFO_MUTED : afford ? INFO_OK : INFO_BAD,
+                false
+        );
     }
 
     // ------------------------------------------------------------------ panel z listą
@@ -136,8 +184,8 @@ public class DefusionTableScreen extends AbstractContainerScreen<DefusionTableMe
         return mx >= x && mx < x + w && my >= y && my < y + h;
     }
 
-    private static String text(String key) {
-        return Component.translatable(key).getString();
+    private static String text(String key, Object... args) {
+        return Component.translatable(key, args).getString();
     }
 
     /** Układ panelu albo null, gdy nie ma czego wybierać. */
@@ -157,6 +205,8 @@ public class DefusionTableScreen extends AbstractContainerScreen<DefusionTableMe
 
         String footer = !this.menu.hasBook()
                 ? text("gui.everything_mod.defusion.need_book")
+                : !this.menu.hasEnoughShelves()
+                ? text("gui.everything_mod.defusion.need_shelves", DefusionConfig.MIN_SHELVES)
                 : this.menu.getSelection() < 0
                 ? text("gui.everything_mod.defusion.pick_one")
                 : "";

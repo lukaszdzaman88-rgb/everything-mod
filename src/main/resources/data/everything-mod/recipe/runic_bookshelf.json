@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "minecraft:bookshelf",
+    "minecraft:amethyst_shard",
+    "minecraft:lapis_lazuli"
+  ],
+  "result": {
+    "id": "everything-mod:runic_bookshelf"
+  }
+}

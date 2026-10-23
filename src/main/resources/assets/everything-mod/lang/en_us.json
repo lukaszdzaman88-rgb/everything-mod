@@ -20,7 +20,15 @@
   "container.everything_mod.defusion_table": "Defusion Table",
   "gui.everything_mod.defusion.title": "Enchantments",
   "gui.everything_mod.defusion.need_book": "Needs an empty book",
-  "gui.everything_mod.defusion.pick_one": "Pick one enchantment"
+  "gui.everything_mod.defusion.pick_one": "Pick one enchantment",
+  "gui.everything_mod.defusion.need_shelves": "Needs %s runic bookshelves",
+  "gui.everything_mod.defusion.shelves": "Runic bookshelves: %s",
+  "gui.everything_mod.defusion.shelves_need": " (need %s)",
+  "gui.everything_mod.defusion.shelves_discount": " (-%s%% XP)",
+  "gui.everything_mod.defusion.cost": "XP cost: %s levels",
+
+  "block.everything-mod.runic_bookshelf": "Runic Bookshelf",
+  "item.everything-mod.runic_bookshelf": "Runic Bookshelf"
 
 
 
