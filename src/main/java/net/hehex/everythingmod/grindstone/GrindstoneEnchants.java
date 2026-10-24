@@ -18,7 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Wspólna logika (klient + serwer) dla ulepszonego Grindstone'a.
+ * Wspólna logika (klient + serwer) dla Grindstone'a i Defusion Table.
  *
  * WAŻNE: klient i serwer MUSZĄ widzieć enchanty w tej samej kolejności,
  * bo zaznaczenie jest przesyłane jako maska bitowa (bit i = i-ty enchant).
@@ -36,8 +36,8 @@ public final class GrindstoneEnchants {
      */
     public static final boolean ALLOW_CURSE_REMOVAL = false;
 
-    /** Maska idzie w jednym DataSlot (16 bitów ze znakiem) => max 15 enchantów. */
-    public static final int MAX_ENTRIES = 15;
+    /** Zaznaczenie to maska bitowa w jednym incie (bity 0..30) => max 31 enchantów na liście. */
+    public static final int MAX_ENTRIES = 31;
 
     /**
      * Logowanie diagnostyczne (klik klienta, odbiór na serwerze, budowa wyniku).
@@ -107,28 +107,6 @@ public final class GrindstoneEnchants {
         }
 
         return entries;
-    }
-
-    /**
-     * Tryb "jeden przedmiot do odczarowania": dokładnie jeden z dwóch slotów
-     * ma przedmiot (1 szt.) i ma on jakieś enchanty. Inaczej zwraca EMPTY
-     * i działa zwykła logika vanilla (np. łączenie dwóch przedmiotów).
-     */
-    public static ItemStack singleInput(ItemStack top, ItemStack bottom) {
-        boolean hasTop = !top.isEmpty();
-        boolean hasBottom = !bottom.isEmpty();
-
-        if (hasTop == hasBottom) {
-            return ItemStack.EMPTY;
-        }
-
-        ItemStack stack = hasTop ? top : bottom;
-
-        if (stack.getCount() != 1 || allEntries(stack).isEmpty()) {
-            return ItemStack.EMPTY;
-        }
-
-        return stack;
     }
 
     /** Podpis zestawu enchantów - gdy się zmieni, zaznaczenie jest zerowane. */
@@ -246,19 +224,6 @@ public final class GrindstoneEnchants {
         for (int i = 0; i < entries.size(); i++) {
             if ((mask & (1 << i)) != 0) {
                 total += minCost(entries.get(i));
-            }
-        }
-
-        return total;
-    }
-
-    /** Vanilla: suma kosztów wszystkich enchantów oprócz klątw (tryb łączenia dwóch itemów). */
-    public static int nonCurseCost(ItemStack stack) {
-        int total = 0;
-
-        for (Entry entry : allEntries(stack)) {
-            if (!entry.curse()) {
-                total += minCost(entry);
             }
         }
 

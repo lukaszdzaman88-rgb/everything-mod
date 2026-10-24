@@ -10,10 +10,10 @@
 
   "gui.everything_mod.enchanting.reroll": "Re-roll",
 
-  "gui.everything_mod.grindstone.title": "Enchantments",
+  "container.everything_mod.grindstone": "Grindstone",
   "gui.everything_mod.grindstone.select_all": "Select all",
   "gui.everything_mod.grindstone.deselect_all": "Deselect all",
-  "gui.everything_mod.grindstone.curse_hint": "Curses cannot be removed",
+  "gui.everything_mod.grindstone.hint_empty": "Insert an enchanted item",
 
   "block.everything-mod.defusion_table": "Defusion Table",
   "item.everything-mod.defusion_table": "Defusion Table",
