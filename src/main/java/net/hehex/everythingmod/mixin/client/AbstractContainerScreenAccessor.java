@@ -13,10 +13,6 @@ public interface AbstractContainerScreenAccessor {
     @Mutable
     void everything$setImageHeight(int height);
 
-    @Accessor("imageWidth")
-    @Mutable
-    void everything$setImageWidth(int width);
-
     @Accessor("inventoryLabelY")
     void everything$setInventoryLabelY(int y);
 

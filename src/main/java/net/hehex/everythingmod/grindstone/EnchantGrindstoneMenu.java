@@ -34,8 +34,9 @@ public class EnchantGrindstoneMenu extends AbstractContainerMenu {
     private static final int HOTBAR_START = 29;
     private static final int INV_END = 38;
 
-    /** Pozycja ekwipunku w oknie (okno jest szersze niż 176 px, więc jest wycentrowane). */
-    public static final int INVENTORY_X = 24;
+    /** Pozycja ekwipunku w oknie: standardowy margines vanilla (x = 8), y przesunięte pod listę. */
+    public static final int INVENTORY_X = 8;
+    public static final int INVENTORY_Y = 90;
 
     private final Container inputSlots = new SimpleContainer(1) {
         @Override
@@ -61,7 +62,7 @@ public class EnchantGrindstoneMenu extends AbstractContainerMenu {
         super(GrindstoneRegistry.MENU, containerId);
         this.access = access;
 
-        this.addSlot(new Slot(this.inputSlots, 0, 11, 20) {
+        this.addSlot(new Slot(this.inputSlots, 0, 16, 22) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return !GrindstoneEnchants.allEntries(stack).isEmpty();
@@ -73,7 +74,7 @@ public class EnchantGrindstoneMenu extends AbstractContainerMenu {
             }
         });
 
-        this.addSlot(new Slot(this.resultSlots, 0, 11, 52) {
+        this.addSlot(new Slot(this.resultSlots, 0, 16, 55) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return false;
@@ -85,7 +86,7 @@ public class EnchantGrindstoneMenu extends AbstractContainerMenu {
             }
         });
 
-        this.addStandardInventorySlots(inventory, INVENTORY_X, 84);
+        this.addStandardInventorySlots(inventory, INVENTORY_X, INVENTORY_Y);
     }
 
     // ------------------------------------------------------------ logika

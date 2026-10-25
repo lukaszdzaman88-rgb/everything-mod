@@ -20,46 +20,59 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.enchantment.Enchantment;
 
 /**
- * Ekran Grindstone'a: po lewej slot na przedmiot, strzałka w dół i slot wyniku;
- * po prawej lista enchantów (przyciski) z suwakiem jak w trybie kreatywnym;
- * pod spodem ekwipunek. Cały wygląd jest rysowany w kodzie w stylu vanilla,
- * więc nie potrzeba własnej tekstury.
+ * Ekran Grindstone'a (okno 176 px jak w vanilla, margines 7 px):
+ *  - po lewej ramka jak w vanillowym Grindstone'ie ze slotem przedmiotu, strzałką w dół i slotem wyniku,
+ *  - po prawej lista enchantów jako przyciski w rozmiarze ze stołu do enchantowania (108 x 19),
+ *    zaznaczony przycisk jest "wciśnięty" (sprite wyłączonego slotu stołu),
+ *  - suwak z trybu kreatywnego,
+ *  - "Select all" w linii tytułu.
+ * Wygląd rysujemy w kodzie i z vanillowych sprite'ów, więc nie potrzeba własnej tekstury.
  */
 public class EnchantGrindstoneScreen extends AbstractContainerScreen<EnchantGrindstoneMenu> {
 
     /* ---- układ okna (piksele GUI, względem lewego górnego rogu okna) ---- */
-    private static final int WINDOW_WIDTH = 208;
+    private static final int WINDOW_HEIGHT = 172;
 
-    private static final int COLUMN_X = 8;
-    private static final int COLUMN_Y = 16;
-    private static final int COLUMN_W = 24;
-    private static final int COLUMN_H = 56;
+    // Ramka vanillowego Grindstone'a: 34 px szerokości, sloty oddalone o 6 px od bocznych krawędzi.
+    private static final int COLUMN_X = 7;
+    private static final int COLUMN_Y = 18;
+    private static final int COLUMN_W = 34;
+    private static final int COLUMN_H = 57;
 
-    private static final int LIST_X = 36;
-    private static final int LIST_Y = 16;
-    private static final int LIST_W = 164;
-    private static final int LIST_H = 56;
+    // Strzałka w dół między slotami (11 px wysokości, wycentrowana w wolnym miejscu 39..53).
+    private static final int ARROW_SHAFT_X = COLUMN_X + 15;
+    private static final int ARROW_SHAFT_W = 4;
+    private static final int ARROW_SHAFT_Y = 41;
+    private static final int ARROW_SHAFT_H = 5;
+    private static final int ARROW_HEAD_X = COLUMN_X + 11;
+    private static final int ARROW_HEAD_Y = 46;
+    private static final int ARROW_HEAD_W = 12;
+    private static final int ARROW_HEAD_ROWS = 6;
 
-    private static final int ROW_X = 38;
+    // Przyciski enchantów: dokładnie jak w stole do enchantowania (108 x 19).
+    private static final int ROW_X = 45;
     private static final int ROW_Y = 18;
-    private static final int ROW_W = 146;
-    private static final int ROW_H = 12;
-    private static final int ROW_STEP = 13;
-    private static final int VISIBLE_ROWS = 4;
+    private static final int ROW_W = 108;
+    private static final int ROW_H = 19;
+    private static final int ROW_STEP = 19;
+    private static final int VISIBLE_ROWS = 3;
+    private static final int ROW_TEXT_PAD = 6;
 
-    private static final int TRACK_X = 186;
+    // Suwak (sprite 12 x 15 z trybu kreatywnego); prawa krawędź = prawy margines 7 px.
+    private static final int TRACK_X = 157;
     private static final int TRACK_Y = 18;
     private static final int TRACK_W = 12;
-    private static final int TRACK_H = 52;
+    private static final int TRACK_H = 57;
     private static final int HANDLE_W = 12;
     private static final int HANDLE_H = 15;
 
-    private static final int BUTTON_RIGHT = 200;
+    // "Select all": linia tytułu, wyrównany do prawej krawędzi suwaka.
+    private static final int BUTTON_RIGHT = TRACK_X + TRACK_W;
     private static final int BUTTON_Y = 3;
-    private static final int BUTTON_H = 12;
-    private static final int BUTTON_PAD = 4;
+    private static final int BUTTON_H = 13;
+    private static final int BUTTON_PAD = 6;
 
-    private static final int CHECKBOX = 8;
+    private static final int INVENTORY_LABEL_Y = 78;
 
     /* ---- kolory (ARGB), paleta vanillowego GUI ---- */
     private static final int OUTLINE = 0xFF000000;
@@ -67,33 +80,36 @@ public class EnchantGrindstoneScreen extends AbstractContainerScreen<EnchantGrin
     private static final int PANEL_LIGHT = 0xFFFFFFFF;
     private static final int PANEL_DARK = 0xFF555555;
 
+    private static final int RIM_DARK = 0xFF373737;
+    private static final int RIM_INNER = 0xFF8B8B8B;
+    private static final int WHITE = 0xFFFFFFFF;
+
     private static final int SLOT_DARK = 0xFF373737;
     private static final int SLOT_LIGHT = 0xFFFFFFFF;
     private static final int SLOT_FILL = 0xFF8B8B8B;
-    private static final int RECESS_FILL = 0xFFB5B5B5;
-
-    private static final int ROW_NORMAL = 0xFFA6A6A6;
-    private static final int ROW_SELECTED = 0xFF86D986;
-    private static final int ROW_LIGHT = 0xFFFFFFFF;
-    private static final int ROW_DARK = 0xFF555555;
 
     // Dokładnie jak podświetlenie slotu w vanilla (biel, 50% krycia); klątwa - czerwień.
     private static final int HOVER_TINT = 0x80FFFFFF;
+    private static final int HOVER_PRESSED_TINT = 0x40FFFFFF;
     private static final int HOVER_CURSE_TINT = 0x80FF4040;
 
-    private static final int BUTTON_NORMAL = 0xFF8B8B8B;
-    private static final int BUTTON_HOVER = 0xFFA0A0A0;
-    private static final int BUTTON_ACTIVE = 0xFF7FD67F;
-    private static final int BUTTON_ACTIVE_HOVER = 0xFF9AEB9A;
-    private static final int BUTTON_DISABLED = 0xFFA8A8A8;
-
-    private static final int TEXT_NORMAL = 0xFF202020;
-    private static final int TEXT_SELECTED = 0xFF083B08;
-    private static final int TEXT_CURSE = 0xFF8A1F1F;
+    private static final int TEXT_ROW = 0xFF2A2214;
+    private static final int TEXT_ROW_PRESSED = 0xFFF2EAD0;
+    private static final int TEXT_CURSE = 0xFF7A1010;
     private static final int TEXT_TITLE = 0xFF404040;
     private static final int TEXT_HINT = 0xFF6A6A6A;
-    private static final int CHECK_FILL = 0xFFF2FFF2;
-    private static final int CHECK_COLOR = 0xFF083B08;
+    private static final int TEXT_BUTTON = 0xFFFFFFFF;
+    private static final int TEXT_BUTTON_DISABLED = 0xFFA0A0A0;
+
+    /* ---- sprite'y z vanilla ---- */
+    private static final Identifier ROW_SPRITE =
+            Identifier.withDefaultNamespace("container/enchanting_table/enchantment_slot");
+    private static final Identifier ROW_SPRITE_PRESSED =
+            Identifier.withDefaultNamespace("container/enchanting_table/enchantment_slot_disabled");
+
+    private static final Identifier BUTTON_SPRITE = Identifier.withDefaultNamespace("widget/button");
+    private static final Identifier BUTTON_SPRITE_HOVER = Identifier.withDefaultNamespace("widget/button_highlighted");
+    private static final Identifier BUTTON_SPRITE_DISABLED = Identifier.withDefaultNamespace("widget/button_disabled");
 
     private static final Identifier SCROLLER =
             Identifier.withDefaultNamespace("container/creative_inventory/scroller");
@@ -109,8 +125,8 @@ public class EnchantGrindstoneScreen extends AbstractContainerScreen<EnchantGrin
     public EnchantGrindstoneScreen(EnchantGrindstoneMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
 
-        // Szersze okno (lista z dłuższymi nazwami). Pole ustawiamy przez accessor (@Mutable).
-        ((AbstractContainerScreenAccessor) this).everything$setImageWidth(WINDOW_WIDTH);
+        // Okno jest wyższe niż w vanilla (lista przycisków 19 px); pole ustawiamy przez accessor (@Mutable).
+        ((AbstractContainerScreenAccessor) this).everything$setImageHeight(WINDOW_HEIGHT);
     }
 
     // ------------------------------------------------------------------ przewijanie
@@ -142,7 +158,7 @@ public class EnchantGrindstoneScreen extends AbstractContainerScreen<EnchantGrin
 
     // ------------------------------------------------------------------ rysowanie
 
-    /** Etykiety rysujemy sami w tle (okno ma nietypową szerokość), więc vanillowe wyłączamy. */
+    /** Etykiety rysujemy sami w tle (inne rozmieszczenie niż w vanilla), więc vanillowe wyłączamy. */
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
     }
@@ -165,51 +181,56 @@ public class EnchantGrindstoneScreen extends AbstractContainerScreen<EnchantGrin
         bevel(graphics, x + 1, y + 1, this.imageWidth - 2, this.imageHeight - 2,
                 PANEL_FILL, PANEL_LIGHT, PANEL_DARK);
 
-        // Etykiety.
+        // Etykiety (pozycje jak w vanilla: tytuł x = 8, ekwipunek x = 8).
         graphics.text(this.font, this.title.getString(), x + 8, y + 6, TEXT_TITLE, false);
         graphics.text(
                 this.font,
                 Component.translatable("container.inventory").getString(),
-                x + EnchantGrindstoneMenu.INVENTORY_X, y + 74,
+                x + EnchantGrindstoneMenu.INVENTORY_X, y + INVENTORY_LABEL_Y,
                 TEXT_TITLE, false
         );
 
         this.drawColumn(graphics, x, y);
         this.drawSelectAllButton(graphics, mouseX, mouseY, removable, mask);
 
-        // Pojemnik listy.
-        bevel(graphics, x + LIST_X, y + LIST_Y, LIST_W, LIST_H, RECESS_FILL, SLOT_DARK, SLOT_LIGHT);
-
         if (entries.isEmpty()) {
             String hint = Component.translatable("gui.everything_mod.grindstone.hint_empty").getString();
 
             graphics.text(
                     this.font, hint,
-                    x + LIST_X + (LIST_W - this.font.width(hint)) / 2,
-                    y + LIST_Y + (LIST_H - 8) / 2,
+                    x + ROW_X + (ROW_W - this.font.width(hint)) / 2,
+                    y + ROW_Y + (VISIBLE_ROWS * ROW_STEP - 8) / 2,
                     TEXT_HINT, false
             );
-            return;
+        } else {
+            this.drawRows(graphics, mouseX, mouseY, entries, mask);
         }
 
-        this.drawRows(graphics, mouseX, mouseY, entries, mask);
         this.drawScrollbar(graphics, entries.size());
     }
 
-    /** Lewa kolumna: slot przedmiotu, strzałka w dół, slot wyniku. */
+    /** Ramka jak w vanillowym Grindstone'ie + tła slotów + strzałka w dół. */
     private void drawColumn(GuiGraphicsExtractor graphics, int x, int y) {
-        bevel(graphics, x + COLUMN_X, y + COLUMN_Y, COLUMN_W, COLUMN_H, RECESS_FILL, SLOT_DARK, SLOT_LIGHT);
+        drawRim(graphics, x + COLUMN_X, y + COLUMN_Y, COLUMN_W, COLUMN_H);
 
-        // Tła wszystkich slotów (wgłębione kwadraty jak w vanilla).
+        // Tła wszystkich slotów (wgłębione kwadraty 18 x 18 jak w vanilla).
         for (Slot slot : this.menu.slots) {
             bevel(graphics, x + slot.x - 1, y + slot.y - 1, 18, 18, SLOT_FILL, SLOT_DARK, SLOT_LIGHT);
         }
 
-        // Strzałka w dół (od slotu przedmiotu do slotu wyniku).
-        graphics.fill(x + 17, y + 40, x + 21, y + 45, SLOT_FILL);
+        // Strzałka w dół: trzon + grot (zwężający się co wiersz o 1 px z każdej strony).
+        graphics.fill(
+                x + ARROW_SHAFT_X, y + ARROW_SHAFT_Y,
+                x + ARROW_SHAFT_X + ARROW_SHAFT_W, y + ARROW_SHAFT_Y + ARROW_SHAFT_H,
+                SLOT_FILL
+        );
 
-        for (int i = 0; i < 5; i++) {
-            graphics.fill(x + 13 + i, y + 45 + i, x + 25 - i, y + 46 + i, SLOT_FILL);
+        for (int i = 0; i < ARROW_HEAD_ROWS; i++) {
+            graphics.fill(
+                    x + ARROW_HEAD_X + i, y + ARROW_HEAD_Y + i,
+                    x + ARROW_HEAD_X + ARROW_HEAD_W - i, y + ARROW_HEAD_Y + i + 1,
+                    SLOT_FILL
+            );
         }
     }
 
@@ -220,36 +241,32 @@ public class EnchantGrindstoneScreen extends AbstractContainerScreen<EnchantGrin
         ) + 2 * BUTTON_PAD;
     }
 
-    /**
-     * "Select all" w linii tytułu, wyrównany do prawej krawędzi listy: nad listą, której dotyczy,
-     * w wolnym miejscu obok tytułu.
-     */
+    /** "Select all": w linii tytułu, wyrównany do prawej krawędzi listy (suwaka), vanillowy przycisk. */
     private void drawSelectAllButton(GuiGraphicsExtractor graphics, int mouseX, int mouseY, int removable, int mask) {
         int bw = this.buttonWidth();
         int bx = this.leftPos + BUTTON_RIGHT - bw;
         int by = this.topPos + BUTTON_Y;
 
-        boolean allSelected = removable != 0 && mask == removable;
-        boolean hover = removable != 0 && inside(mouseX, mouseY, bx, by, bw, BUTTON_H);
+        boolean enabled = removable != 0;
+        boolean hover = enabled && inside(mouseX, mouseY, bx, by, bw, BUTTON_H);
 
-        bevel(
-                graphics, bx, by, bw, BUTTON_H,
-                removable == 0 ? BUTTON_DISABLED
-                        : allSelected ? (hover ? BUTTON_ACTIVE_HOVER : BUTTON_ACTIVE)
-                        : (hover ? BUTTON_HOVER : BUTTON_NORMAL),
-                ROW_LIGHT, ROW_DARK
+        graphics.blitSprite(
+                RenderPipelines.GUI_TEXTURED,
+                !enabled ? BUTTON_SPRITE_DISABLED : hover ? BUTTON_SPRITE_HOVER : BUTTON_SPRITE,
+                bx, by, bw, BUTTON_H
         );
 
+        // Wszystko zaznaczone => przycisk odznacza.
         String label = Component.translatable(
-                allSelected
+                enabled && mask == removable
                         ? "gui.everything_mod.grindstone.deselect_all"
                         : "gui.everything_mod.grindstone.select_all"
         ).getString();
 
         graphics.text(
                 this.font, label,
-                bx + (bw - this.font.width(label)) / 2, by + 2,
-                removable == 0 ? TEXT_HINT : TEXT_NORMAL, false
+                bx + (bw - this.font.width(label)) / 2, by + (BUTTON_H - 8) / 2,
+                enabled ? TEXT_BUTTON : TEXT_BUTTON_DISABLED, enabled
         );
     }
 
@@ -273,31 +290,38 @@ public class EnchantGrindstoneScreen extends AbstractContainerScreen<EnchantGrin
             int rx = this.leftPos + ROW_X;
             int ry = this.topPos + ROW_Y + i * ROW_STEP;
 
-            boolean selected = (mask & (1 << index)) != 0;
+            boolean pressed = (mask & (1 << index)) != 0;
             boolean hover = inside(mouseX, mouseY, rx, ry, ROW_W, ROW_H) && !this.scrolling;
 
-            // Przycisk (wypukły).
-            bevel(graphics, rx, ry, ROW_W, ROW_H, selected ? ROW_SELECTED : ROW_NORMAL, ROW_LIGHT, ROW_DARK);
+            // Przycisk ze stołu do enchantowania; zaznaczony = sprite "wciśniętego" (ciemnego) slotu.
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, pressed ? ROW_SPRITE_PRESSED : ROW_SPRITE,
+                    rx, ry, ROW_W, ROW_H);
 
             // Podświetlenie po najechaniu jak na slocie (pod napisem, żeby tekst nie blakł);
             // klątwa świeci na czerwono i nie reaguje na klik.
             if (hover) {
                 graphics.fill(rx + 1, ry + 1, rx + ROW_W - 1, ry + ROW_H - 1,
-                        entry.removable() ? HOVER_TINT : HOVER_CURSE_TINT);
+                        !entry.removable() ? HOVER_CURSE_TINT : pressed ? HOVER_PRESSED_TINT : HOVER_TINT);
             }
 
-            // Checkbox i nazwa.
-            drawCheckbox(graphics, rx + 2, ry + (ROW_H - CHECKBOX) / 2, selected, entry.removable());
+            Component fullName = Enchantment.getFullname(entry.holder(), entry.level());
+            String name = fullName.getString();
+            String shown = this.fit(name, ROW_W - 2 * ROW_TEXT_PAD);
 
-            String name = Enchantment.getFullname(entry.holder(), entry.level()).getString();
+            // Wciśnięty przycisk: napis lekko przesunięty w dół i w prawo.
+            int offset = pressed ? 1 : 0;
 
             graphics.text(
-                    this.font,
-                    this.fit(name, ROW_W - CHECKBOX - 9),
-                    rx + CHECKBOX + 6, ry + (ROW_H - 8) / 2 + 1,
-                    !entry.removable() ? TEXT_CURSE : selected ? TEXT_SELECTED : TEXT_NORMAL,
-                    false
+                    this.font, shown,
+                    rx + ROW_TEXT_PAD + offset, ry + (ROW_H - 8) / 2 + offset,
+                    !entry.removable() ? TEXT_CURSE : pressed ? TEXT_ROW_PRESSED : TEXT_ROW,
+                    pressed
             );
+
+            // Za długa nazwa została skrócona => pełna nazwa w podpowiedzi.
+            if (hover && !shown.equals(name)) {
+                graphics.setTooltipForNextFrame(this.font, fullName, mouseX, mouseY);
+            }
         }
     }
 
@@ -353,12 +377,21 @@ public class EnchantGrindstoneScreen extends AbstractContainerScreen<EnchantGrin
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         int max = maxScroll(this.menu.getEntries().size());
 
-        if (max > 0 && inside(mouseX, mouseY, this.leftPos + LIST_X, this.topPos + LIST_Y, LIST_W, LIST_H)) {
+        if (max > 0 && this.insideList(mouseX, mouseY)) {
             this.scrollOffs = Math.max(0.0F, Math.min(1.0F, this.scrollOffs - (float) (scrollY / max)));
             return true;
         }
 
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
+    /** Obszar listy: przyciski + suwak. */
+    private boolean insideList(double mx, double my) {
+        return inside(
+                mx, my,
+                this.leftPos + ROW_X, this.topPos + ROW_Y,
+                TRACK_X + TRACK_W - ROW_X, VISIBLE_ROWS * ROW_STEP
+        );
     }
 
     /** @return true, jeśli kliknięcie wypadło w element listy / przycisk (i ma zostać pochłonięte). */
@@ -381,7 +414,7 @@ public class EnchantGrindstoneScreen extends AbstractContainerScreen<EnchantGrin
             return true;
         }
 
-        if (!inside(mx, my, this.leftPos + LIST_X, this.topPos + LIST_Y, LIST_W, LIST_H)) {
+        if (!this.insideList(mx, my)) {
             return false;
         }
 
@@ -397,7 +430,7 @@ public class EnchantGrindstoneScreen extends AbstractContainerScreen<EnchantGrin
             return true;
         }
 
-        // Wiersze.
+        // Przyciski.
         int first = this.firstRow(entries.size());
 
         for (int i = 0; i < VISIBLE_ROWS && first + i < entries.size(); i++) {
@@ -466,23 +499,15 @@ public class EnchantGrindstoneScreen extends AbstractContainerScreen<EnchantGrin
         graphics.fill(x + w - 1, y + 1, x + w, y + h, dark);
     }
 
-    /** Checkbox 8x8 jak "wgłębiony" slot, ptaszek jako pixel-art (jasne wnętrze, ciemny ptaszek). */
-    private static void drawCheckbox(GuiGraphicsExtractor graphics, int x, int y, boolean checked, boolean enabled) {
-        bevel(graphics, x, y, CHECKBOX, CHECKBOX, enabled ? SLOT_FILL : 0xFF9A9A9A, SLOT_DARK, SLOT_LIGHT);
-
-        if (!checked) {
-            return;
-        }
-
-        graphics.fill(x + 1, y + 1, x + CHECKBOX - 1, y + CHECKBOX - 1, CHECK_FILL);
-
-        int[][] pixels = {
-                {0, 3}, {1, 4}, {2, 3}, {3, 2}, {4, 1}, {5, 0},
-                {0, 4}, {1, 5}, {2, 4}, {3, 3}, {4, 2}, {5, 1}
-        };
-
-        for (int[] p : pixels) {
-            graphics.fill(x + 1 + p[0], y + 1 + p[1], x + 2 + p[0], y + 2 + p[1], CHECK_COLOR);
-        }
+    /**
+     * Ramka dokładnie jak w vanillowym Grindstone'ie: ciemny obrys dookoła, a w środku drugi,
+     * 1-pikselowy pasek (szary na górze i po lewej, biały na dole i po prawej).
+     */
+    private static void drawRim(GuiGraphicsExtractor graphics, int x, int y, int w, int h) {
+        graphics.fill(x, y, x + w, y + h, RIM_DARK);
+        graphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, RIM_INNER);
+        graphics.fill(x + 2, y + h - 2, x + w - 1, y + h - 1, WHITE);
+        graphics.fill(x + w - 2, y + 2, x + w - 1, y + h - 1, WHITE);
+        graphics.fill(x + 2, y + 2, x + w - 2, y + h - 2, PANEL_FILL);
     }
 }
