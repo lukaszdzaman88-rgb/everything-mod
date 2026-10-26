@@ -1,5 +1,6 @@
 package net.hehex.everythingmod.client;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -21,9 +22,11 @@ import net.minecraft.world.item.enchantment.Enchantment;
 
 /**
  * Ekran Grindstone'a (okno 176 px jak w vanilla, margines 7 px):
- *  - po lewej ramka jak w vanillowym Grindstone'ie ze slotem przedmiotu, strzałką w dół i slotem wyniku,
- *  - po prawej lista enchantów jako przyciski w rozmiarze ze stołu do enchantowania (108 x 19),
- *    zaznaczony przycisk jest "wciśnięty" (sprite wyłączonego slotu stołu),
+ *  - po lewej słupek i ramka jak w vanillowym Grindstone'ie ze slotem przedmiotu, strzałką w dół
+ *    i slotem wyniku,
+ *  - po prawej lista enchantów jako przyciski w rozmiarze ze stołu do enchantowania (108 x 19)
+ *    i w kolorze zwykłego przycisku "Select all"; zaznaczony przycisk jest "wciśnięty"
+ *    (sprite wyłączonego przycisku),
  *  - suwak z trybu kreatywnego,
  *  - "Select all" w linii tytułu.
  * Wygląd rysujemy w kodzie i z vanillowych sprite'ów, więc nie potrzeba własnej tekstury.
@@ -33,24 +36,32 @@ public class EnchantGrindstoneScreen extends AbstractContainerScreen<EnchantGrin
     /* ---- układ okna (piksele GUI, względem lewego górnego rogu okna) ---- */
     private static final int WINDOW_HEIGHT = 172;
 
-    // Ramka vanillowego Grindstone'a: 34 px szerokości, sloty oddalone o 6 px od bocznych krawędzi.
-    private static final int COLUMN_X = 7;
+    // Lewy słupek jak w vanillowym Grindstone'ie: ta sama ramka, tylko wąska i wysoka. Dzieli lewą
+    // krawędź z ramką slotów (jak w vanilla). Układ jest policzony tak, żeby zmieścić się w 176 px:
+    // słupek + ramka (35) + 4 + przyciski (108) + 3 + suwak (12) = 162 px między marginesami 7 px.
+    private static final int PILLAR_X = 7;
+    private static final int PILLAR_Y = 28;
+    private static final int PILLAR_W = 8;
+    private static final int PILLAR_H = 49;
+
+    // Ramka slotów: 28 px szerokości, sloty oddalone o 3 px od bocznych krawędzi.
+    private static final int COLUMN_X = PILLAR_X + PILLAR_W - 1;
     private static final int COLUMN_Y = 18;
-    private static final int COLUMN_W = 34;
+    private static final int COLUMN_W = 28;
     private static final int COLUMN_H = 57;
 
     // Strzałka w dół między slotami (11 px wysokości, wycentrowana w wolnym miejscu 39..53).
-    private static final int ARROW_SHAFT_X = COLUMN_X + 15;
+    private static final int ARROW_SHAFT_X = COLUMN_X + 12;
     private static final int ARROW_SHAFT_W = 4;
     private static final int ARROW_SHAFT_Y = 41;
     private static final int ARROW_SHAFT_H = 5;
-    private static final int ARROW_HEAD_X = COLUMN_X + 11;
+    private static final int ARROW_HEAD_X = COLUMN_X + 8;
     private static final int ARROW_HEAD_Y = 46;
     private static final int ARROW_HEAD_W = 12;
     private static final int ARROW_HEAD_ROWS = 6;
 
     // Przyciski enchantów: dokładnie jak w stole do enchantowania (108 x 19).
-    private static final int ROW_X = 45;
+    private static final int ROW_X = 46;
     private static final int ROW_Y = 18;
     private static final int ROW_W = 108;
     private static final int ROW_H = 19;
@@ -69,10 +80,12 @@ public class EnchantGrindstoneScreen extends AbstractContainerScreen<EnchantGrin
     // "Select all": linia tytułu, wyrównany do prawej krawędzi suwaka.
     private static final int BUTTON_RIGHT = TRACK_X + TRACK_W;
     private static final int BUTTON_Y = 3;
-    private static final int BUTTON_H = 13;
+    private static final int BUTTON_H = 14;
     private static final int BUTTON_PAD = 6;
+    // Napis w przycisku przesunięty o 1 px w dół względem środka (na ekranie ok. 2-3 px przy skali 2-3).
+    private static final int BUTTON_LABEL_OFFSET_Y = 1;
 
-    private static final int INVENTORY_LABEL_Y = 78;
+    private static final int INVENTORY_LABEL_Y = 80;
 
     /* ---- kolory (ARGB), paleta vanillowego GUI ---- */
     private static final int OUTLINE = 0xFF000000;
@@ -88,28 +101,29 @@ public class EnchantGrindstoneScreen extends AbstractContainerScreen<EnchantGrin
     private static final int SLOT_LIGHT = 0xFFFFFFFF;
     private static final int SLOT_FILL = 0xFF8B8B8B;
 
-    // Dokładnie jak podświetlenie slotu w vanilla (biel, 50% krycia); klątwa - czerwień.
-    private static final int HOVER_TINT = 0x80FFFFFF;
-    private static final int HOVER_PRESSED_TINT = 0x40FFFFFF;
-    private static final int HOVER_CURSE_TINT = 0x80FF4040;
+    // Podświetlenie po najechaniu jak na slocie (biała nakładka); lżejsze niż w vanilla (50%), bo na
+    // szarym przycisku jasny napis musi zostać czytelny. Klątwa - czerwień.
+    private static final int HOVER_TINT = 0x40FFFFFF;
+    private static final int HOVER_PRESSED_TINT = 0x30FFFFFF;
+    private static final int HOVER_CURSE_TINT = 0x60FF3030;
 
-    private static final int TEXT_ROW = 0xFF2A2214;
-    private static final int TEXT_ROW_PRESSED = 0xFFF2EAD0;
-    private static final int TEXT_CURSE = 0xFF7A1010;
+    private static final int TEXT_ROW = 0xFFFFFFFF;
+    private static final int TEXT_ROW_PRESSED = 0xFFE0E0E0;
+    private static final int TEXT_CURSE = 0xFFFF6B6B;
     private static final int TEXT_TITLE = 0xFF404040;
     private static final int TEXT_HINT = 0xFF6A6A6A;
     private static final int TEXT_BUTTON = 0xFFFFFFFF;
     private static final int TEXT_BUTTON_DISABLED = 0xFFA0A0A0;
 
     /* ---- sprite'y z vanilla ---- */
-    private static final Identifier ROW_SPRITE =
-            Identifier.withDefaultNamespace("container/enchanting_table/enchantment_slot");
-    private static final Identifier ROW_SPRITE_PRESSED =
-            Identifier.withDefaultNamespace("container/enchanting_table/enchantment_slot_disabled");
-
+    // Wiersze używają dokładnie tych samych sprite'ów co przycisk "Select all" (ten sam kolor);
+    // zaznaczony wiersz = sprite wyłączonego przycisku (ciemny, płaski = "wciśnięty").
     private static final Identifier BUTTON_SPRITE = Identifier.withDefaultNamespace("widget/button");
     private static final Identifier BUTTON_SPRITE_HOVER = Identifier.withDefaultNamespace("widget/button_highlighted");
     private static final Identifier BUTTON_SPRITE_DISABLED = Identifier.withDefaultNamespace("widget/button_disabled");
+
+    private static final Identifier ROW_SPRITE = BUTTON_SPRITE;
+    private static final Identifier ROW_SPRITE_PRESSED = BUTTON_SPRITE_DISABLED;
 
     private static final Identifier SCROLLER =
             Identifier.withDefaultNamespace("container/creative_inventory/scroller");
@@ -194,14 +208,23 @@ public class EnchantGrindstoneScreen extends AbstractContainerScreen<EnchantGrin
         this.drawSelectAllButton(graphics, mouseX, mouseY, removable, mask);
 
         if (entries.isEmpty()) {
-            String hint = Component.translatable("gui.everything_mod.grindstone.hint_empty").getString();
-
-            graphics.text(
-                    this.font, hint,
-                    x + ROW_X + (ROW_W - this.font.width(hint)) / 2,
-                    y + ROW_Y + (VISIBLE_ROWS * ROW_STEP - 8) / 2,
-                    TEXT_HINT, false
+            // Podpowiedź zawijamy do szerokości przycisków (długa linia wychodziła poza listę).
+            List<String> lines = this.wrap(
+                    Component.translatable("gui.everything_mod.grindstone.hint_empty").getString(),
+                    ROW_W - 8
             );
+
+            int lineHeight = 9;
+            int top = y + ROW_Y + (VISIBLE_ROWS * ROW_STEP - lines.size() * lineHeight) / 2;
+
+            for (int i = 0; i < lines.size(); i++) {
+                graphics.text(
+                        this.font, lines.get(i),
+                        x + ROW_X + (ROW_W - this.font.width(lines.get(i))) / 2,
+                        top + i * lineHeight,
+                        TEXT_HINT, false
+                );
+            }
         } else {
             this.drawRows(graphics, mouseX, mouseY, entries, mask);
         }
@@ -209,8 +232,10 @@ public class EnchantGrindstoneScreen extends AbstractContainerScreen<EnchantGrin
         this.drawScrollbar(graphics, entries.size());
     }
 
-    /** Ramka jak w vanillowym Grindstone'ie + tła slotów + strzałka w dół. */
+    /** Słupek i ramka jak w vanillowym Grindstone'ie + tła slotów + strzałka w dół. */
     private void drawColumn(GuiGraphicsExtractor graphics, int x, int y) {
+        // Słupek pierwszy: ramka slotów nadpisuje jego prawą krawędź (wspólna linia jak w vanilla).
+        drawRim(graphics, x + PILLAR_X, y + PILLAR_Y, PILLAR_W, PILLAR_H);
         drawRim(graphics, x + COLUMN_X, y + COLUMN_Y, COLUMN_W, COLUMN_H);
 
         // Tła wszystkich slotów (wgłębione kwadraty 18 x 18 jak w vanilla).
@@ -265,7 +290,7 @@ public class EnchantGrindstoneScreen extends AbstractContainerScreen<EnchantGrin
 
         graphics.text(
                 this.font, label,
-                bx + (bw - this.font.width(label)) / 2, by + (BUTTON_H - 8) / 2,
+                bx + (bw - this.font.width(label)) / 2, by + (BUTTON_H - 8) / 2 + BUTTON_LABEL_OFFSET_Y,
                 enabled ? TEXT_BUTTON : TEXT_BUTTON_DISABLED, enabled
         );
     }
@@ -315,7 +340,7 @@ public class EnchantGrindstoneScreen extends AbstractContainerScreen<EnchantGrin
                     this.font, shown,
                     rx + ROW_TEXT_PAD + offset, ry + (ROW_H - 8) / 2 + offset,
                     !entry.removable() ? TEXT_CURSE : pressed ? TEXT_ROW_PRESSED : TEXT_ROW,
-                    pressed
+                    true
             );
 
             // Za długa nazwa została skrócona => pełna nazwa w podpowiedzi.
@@ -332,7 +357,8 @@ public class EnchantGrindstoneScreen extends AbstractContainerScreen<EnchantGrin
         bevel(graphics, tx, ty, TRACK_W, TRACK_H, SLOT_FILL, SLOT_DARK, SLOT_LIGHT);
 
         boolean canScroll = maxScroll(entryCount) > 0;
-        int handleY = ty + (int) ((TRACK_H - HANDLE_H - 2) * (canScroll ? this.scrollOffs : 0.0F));
+        // Cały skok = wysokość toru minus uchwyt (wcześniej odejmowałem jeszcze 2 px i uchwyt nie dochodził do końca).
+        int handleY = ty + (int) ((TRACK_H - HANDLE_H) * (canScroll ? this.scrollOffs : 0.0F));
 
         // Ten sam sprite suwaka co w ekranie trybu kreatywnego.
         graphics.blitSprite(
@@ -469,6 +495,29 @@ public class EnchantGrindstoneScreen extends AbstractContainerScreen<EnchantGrin
 
     private static boolean inside(double mx, double my, int x, int y, int w, int h) {
         return mx >= x && mx < x + w && my >= y && my < y + h;
+    }
+
+    /** Zawija tekst po słowach do podanej szerokości. */
+    private List<String> wrap(String text, int maxWidth) {
+        List<String> lines = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+
+        for (String word : text.split(" ")) {
+            String candidate = current.length() == 0 ? word : current + " " + word;
+
+            if (current.length() > 0 && this.font.width(candidate) > maxWidth) {
+                lines.add(current.toString());
+                current = new StringBuilder(word);
+            } else {
+                current = new StringBuilder(candidate);
+            }
+        }
+
+        if (current.length() > 0) {
+            lines.add(current.toString());
+        }
+
+        return lines;
     }
 
     /** Przycina tekst, żeby mieścił się w podanej szerokości (dodaje "..."). */

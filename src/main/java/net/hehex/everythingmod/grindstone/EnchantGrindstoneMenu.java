@@ -62,7 +62,7 @@ public class EnchantGrindstoneMenu extends AbstractContainerMenu {
         super(GrindstoneRegistry.MENU, containerId);
         this.access = access;
 
-        this.addSlot(new Slot(this.inputSlots, 0, 16, 22) {
+        this.addSlot(new Slot(this.inputSlots, 0, 20, 22) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return !GrindstoneEnchants.allEntries(stack).isEmpty();
@@ -74,7 +74,7 @@ public class EnchantGrindstoneMenu extends AbstractContainerMenu {
             }
         });
 
-        this.addSlot(new Slot(this.resultSlots, 0, 16, 55) {
+        this.addSlot(new Slot(this.resultSlots, 0, 20, 55) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return false;
